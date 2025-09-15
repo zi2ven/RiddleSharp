@@ -1,0 +1,24 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RiddleSharp", "RiddleSharp.csproj", "{AF321E37-BD5D-4BA0-9FF3-634CA0271495}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Riddle.Generated", "Riddle.Generated\Riddle.Generated.csproj", "{81D851F5-2762-4A43-9A6B-693C02933CAE}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{672BE42D-F625-4CE2-AD51-82F1912A4FD5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AF321E37-BD5D-4BA0-9FF3-634CA0271495}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AF321E37-BD5D-4BA0-9FF3-634CA0271495}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AF321E37-BD5D-4BA0-9FF3-634CA0271495}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AF321E37-BD5D-4BA0-9FF3-634CA0271495}.Release|Any CPU.Build.0 = Release|Any CPU
+		{81D851F5-2762-4A43-9A6B-693C02933CAE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{81D851F5-2762-4A43-9A6B-693C02933CAE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{81D851F5-2762-4A43-9A6B-693C02933CAE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{81D851F5-2762-4A43-9A6B-693C02933CAE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
