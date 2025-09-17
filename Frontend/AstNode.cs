@@ -1,11 +1,26 @@
 ﻿namespace RiddleSharp.Frontend;
 
+public record QualifiedName(IReadOnlyList<string> Parts)
+{
+    public QualifiedName(string part) : this([part])
+    {
+    }
+
+    public static QualifiedName Parse(string text)
+    {
+        var parts = text.Split(["::"], StringSplitOptions.None);
+        return new QualifiedName(parts);
+    }
+
+    public override string ToString() => string.Join("::", Parts);
+}
+
 public abstract record AstNode
 {
     public abstract T Accept<T>(AstVisitor<T> visitor);
 }
 
-public record Unit(Stmt[] Stmts) : AstNode
+public record Unit(Stmt[] Stmts, QualifiedName PackageName) : AstNode
 {
     public override T Accept<T>(AstVisitor<T> visitor)
     {
@@ -15,9 +30,9 @@ public record Unit(Stmt[] Stmts) : AstNode
 
 public abstract record Stmt : AstNode;
 
-public abstract record Decl(string Name) : Stmt;
+public abstract record Decl(QualifiedName Name) : Stmt;
 
-public record VarDecl(string Name, Expr? TypeLit, Expr? Value) : Decl(Name)
+public record VarDecl(QualifiedName Name, Expr? TypeLit, Expr? Value) : Decl(Name)
 {
     public override T Accept<T>(AstVisitor<T> visitor)
     {
@@ -25,7 +40,7 @@ public record VarDecl(string Name, Expr? TypeLit, Expr? Value) : Decl(Name)
     }
 }
 
-public record FuncParam(string Name, Expr TypeLit) : Decl(Name)
+public record FuncParam(string Name, Expr TypeLit) : Stmt
 {
     public override T Accept<T>(AstVisitor<T> visitor)
     {
@@ -33,7 +48,7 @@ public record FuncParam(string Name, Expr TypeLit) : Decl(Name)
     }
 }
 
-public record FuncDecl(string Name, Expr? TypeLit, FuncParam[] Args, Stmt[] Body) : Decl(Name)
+public record FuncDecl(QualifiedName Name, Expr? TypeLit, FuncParam[] Args, Stmt[] Body) : Decl(Name)
 {
     public override T Accept<T>(AstVisitor<T> visitor)
     {
@@ -67,9 +82,10 @@ public record Integer(int Value) : Expr
     }
 }
 
-public record Symbol(string Name) : Expr
+public record Symbol(QualifiedName Name) : Expr
 {
     public WeakReference<Decl>? DeclReference { get; set; } = null;
+
     public override T Accept<T>(AstVisitor<T> visitor)
     {
         return visitor.VisitSymbol(this);

@@ -4,7 +4,7 @@ using RiddleSharp.Frontend;
 const string a = """
                  var a = 1;
                  fun main()->int{
-                    var a: = 1;
+                    var a = Locals::a;
                  }
                  """;
 var astLower = new CstLower();

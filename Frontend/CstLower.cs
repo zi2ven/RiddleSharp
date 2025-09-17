@@ -51,7 +51,7 @@ public class CstLower : RiddleBaseVisitor<AstNode>
                 Console.WriteLine(msg);
             Environment.Exit(62);
         }
-        
+
         return VisitCompileUnit(tree);
     }
 
@@ -78,7 +78,13 @@ public class CstLower : RiddleBaseVisitor<AstNode>
     public override AstNode VisitCompileUnit(RiddleParser.CompileUnitContext context)
     {
         var stmts = context.statememt().Select(LowerOrThrow<Stmt>).ToList();
-        return new Unit(stmts.ToArray());
+        var package = QualifiedName.Parse("");
+        if (context.packageStmt() is not null)
+        {
+            package = QualifiedName.Parse(context.packageStmt().name.Text);
+        }
+
+        return new Unit(stmts.ToArray(), package);
     }
 
     public override AstNode VisitExprStmt(RiddleParser.ExprStmtContext context)
@@ -91,14 +97,14 @@ public class CstLower : RiddleBaseVisitor<AstNode>
 
     public override AstNode VisitSymbol(RiddleParser.SymbolContext context)
     {
-        return new Symbol(context.GetText());
+        return new Symbol(QualifiedName.Parse(context.GetText()));
     }
 
     public override AstNode VisitVarDecl(RiddleParser.VarDeclContext context)
     {
         var type = LowerOrNull<Expr>(context.type);
         var value = LowerOrNull<Expr>(context.value);
-        return new VarDecl(context.name.Text, type, value);
+        return new VarDecl(QualifiedName.Parse(context.name.Text), type, value);
     }
 
     public override AstNode VisitBinaryOp(RiddleParser.BinaryOpContext context)
@@ -119,7 +125,7 @@ public class CstLower : RiddleBaseVisitor<AstNode>
         var @params = context.funcParam().Select(LowerOrThrow<FuncParam>).ToList();
         var returnType = LowerOrNull<Expr>(context.type);
         var body = LowerOrThrow<Block>(context.body);
-        return new FuncDecl(name, returnType, @params.ToArray(), body.Body);
+        return new FuncDecl(QualifiedName.Parse(name), returnType, @params.ToArray(), body.Body);
     }
 
     public override AstNode VisitBlock(RiddleParser.BlockContext context)

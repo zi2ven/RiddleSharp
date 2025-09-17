@@ -1,13 +1,17 @@
 ﻿grammar Riddle;
 
 compileUnit
-    : statememt*
+    : (packageStmt)? statememt*
     ;
     
 statememt
     : varDecl
     | funcDecl
     | exprStmt
+    ;
+
+packageStmt
+    : Package name=QName
     ;
 
 varDecl
@@ -22,10 +26,6 @@ funcDecl
     : Fun name=Identifier LParen (funcParam (Comma funcParam)*)? RParen ('->' type=expression) ((body=block)|Semi)
     ;
     
-ifStmt
-    :
-    ;
-    
 block
     : LBrace statememt* RBrace
     ;    
@@ -37,11 +37,14 @@ exprStmt
 expression
     : left=expression OP right=expression #binaryOp
     | IntLit #integer
-    | Identifier #symbol
+    | QName #symbol
     ;
+    
+QName: (Identifier Colon Colon)* Identifier;
     
 Var: 'var';
 Fun: 'fun';
+Package: 'package' ;
 
 Semi: ';';
 Colon: ':';

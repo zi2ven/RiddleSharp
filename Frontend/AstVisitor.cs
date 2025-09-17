@@ -6,26 +6,27 @@ public abstract class AstVisitor<T>
     {
         return node.Accept(this);
     }
-    
+
     public virtual T VisitUnit(Unit node)
     {
         foreach (var i in node.Stmts)
         {
             Visit(i);
         }
+
         return default!;
     }
 
     public virtual T VisitVarDecl(VarDecl node)
     {
-        if(node.Value is not null)Visit(node.Value);
-        if(node.TypeLit is not null)Visit(node.TypeLit);
+        if (node.Value is not null) Visit(node.Value);
+        if (node.TypeLit is not null) Visit(node.TypeLit);
         return default!;
     }
 
     public virtual T VisitFuncDecl(FuncDecl node)
     {
-        if(node.TypeLit is not null)Visit(node.TypeLit);
+        if (node.TypeLit is not null) Visit(node.TypeLit);
         foreach (var i in node.Args)
         {
             Visit(i);
@@ -35,6 +36,7 @@ public abstract class AstVisitor<T>
         {
             Visit(i);
         }
+
         return default!;
     }
 
@@ -44,6 +46,7 @@ public abstract class AstVisitor<T>
         {
             Visit(i);
         }
+
         return default!;
     }
 
