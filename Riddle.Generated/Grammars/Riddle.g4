@@ -1,7 +1,7 @@
 ﻿grammar Riddle;
 
 compileUnit
-    : (packageStmt)? statememt*
+    : (packageStmt)? (importStmt)* statememt*
     ;
     
 statememt
@@ -11,7 +11,11 @@ statememt
     ;
 
 packageStmt
-    : Package name=QName
+    : Package name=qName Semi
+    ;
+    
+importStmt
+    : Import name=qName Semi
     ;
 
 varDecl
@@ -23,7 +27,7 @@ funcParam
     ;    
 
 funcDecl
-    : Fun name=Identifier LParen (funcParam (Comma funcParam)*)? RParen ('->' type=expression) ((body=block)|Semi)
+    : Fun name=Identifier LParen (funcParam (Comma funcParam)*)? RParen (Arrow type=expression)? ((body=block)|Semi)
     ;
     
 block
@@ -37,14 +41,19 @@ exprStmt
 expression
     : left=expression OP right=expression #binaryOp
     | IntLit #integer
-    | QName #symbol
+    | qName #symbol
     ;
     
-QName: (Identifier Colon Colon)* Identifier;
+qName
+    : (Identifier Colon Colon)* Identifier
+    ;   
+ 
+OP: '+' | '-' | '*' | '/' | '%' | '==' | '!=' | '<' | '>' | '<=' | '>=';
     
 Var: 'var';
 Fun: 'fun';
 Package: 'package' ;
+Import: 'import' ;
 
 Semi: ';';
 Colon: ':';
@@ -54,9 +63,9 @@ LParen : '(' ;
 RParen : ')' ;
 LBrace : '{' ;
 RBrace : '}' ;
+Arrow: '->';
 
 IntLit: [1-9][0-9]* | '0';
 Identifier: [a-zA-Z_][a-zA-Z0-9_]*;
-OP: [-+*/!%^&~];
 
 WD: [\t\r\n ] -> skip;

@@ -1,11 +1,25 @@
 ﻿using Antlr4.Runtime;
 using RiddleSharp.Frontend;
+using RiddleSharp.Semantics;
 
 const string a = """
-                 var a = 1;
+                 package main;
+                 import test;
+                 var a = test::b;
                  fun main()->int{
-                    var a = Locals::a;
+                    var a = 1;
                  }
                  """;
+const string b = """
+                 package test;
+                 var b = 1;
+                 """;
+
 var astLower = new CstLower();
-astLower.Parse(a);
+var u1 = astLower.Parse(a);
+var u2 = astLower.Parse(b);
+var sp = new SymbolPass();
+
+var x = sp.Run([(u2 as Unit)!,(u1 as Unit)!]);
+
+Console.WriteLine(x);

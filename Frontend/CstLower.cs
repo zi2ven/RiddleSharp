@@ -78,13 +78,23 @@ public class CstLower : RiddleBaseVisitor<AstNode>
     public override AstNode VisitCompileUnit(RiddleParser.CompileUnitContext context)
     {
         var stmts = context.statememt().Select(LowerOrThrow<Stmt>).ToList();
-        var package = QualifiedName.Parse("");
+        var package = new QualifiedName();
         if (context.packageStmt() is not null)
         {
-            package = QualifiedName.Parse(context.packageStmt().name.Text);
+            package = QualifiedName.Parse(context.packageStmt().name.GetText());
+        }
+        
+        var depends = new HashSet<QualifiedName>();
+
+        foreach (var stmt in context.importStmt())
+        {
+            depends.Add(QualifiedName.Parse(stmt.name.GetText()));
         }
 
-        return new Unit(stmts.ToArray(), package);
+        return new Unit(stmts.ToArray(), package)
+        {
+            Depend = depends
+        };
     }
 
     public override AstNode VisitExprStmt(RiddleParser.ExprStmtContext context)
@@ -104,7 +114,7 @@ public class CstLower : RiddleBaseVisitor<AstNode>
     {
         var type = LowerOrNull<Expr>(context.type);
         var value = LowerOrNull<Expr>(context.value);
-        return new VarDecl(QualifiedName.Parse(context.name.Text), type, value);
+        return new VarDecl(context.name.Text, type, value);
     }
 
     public override AstNode VisitBinaryOp(RiddleParser.BinaryOpContext context)
@@ -125,7 +135,7 @@ public class CstLower : RiddleBaseVisitor<AstNode>
         var @params = context.funcParam().Select(LowerOrThrow<FuncParam>).ToList();
         var returnType = LowerOrNull<Expr>(context.type);
         var body = LowerOrThrow<Block>(context.body);
-        return new FuncDecl(QualifiedName.Parse(name), returnType, @params.ToArray(), body.Body);
+        return new FuncDecl(name, returnType, @params.ToArray(), body.Body);
     }
 
     public override AstNode VisitBlock(RiddleParser.BlockContext context)

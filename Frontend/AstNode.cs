@@ -1,8 +1,12 @@
 ﻿namespace RiddleSharp.Frontend;
 
-public record QualifiedName(IReadOnlyList<string> Parts)
+public sealed record QualifiedName(IReadOnlyList<string> Parts)
 {
     public QualifiedName(string part) : this([part])
+    {
+    }
+
+    public QualifiedName() : this([])
     {
     }
 
@@ -12,7 +16,33 @@ public record QualifiedName(IReadOnlyList<string> Parts)
         return new QualifiedName(parts);
     }
 
+    public QualifiedName Add(string value)
+    {
+        return new QualifiedName(Parts.Concat([value]).ToArray());
+    }
+
+    public QualifiedName Add(QualifiedName value)
+    {
+        return new QualifiedName(Parts.Concat(value.Parts).ToArray());
+    }
+
     public override string ToString() => string.Join("::", Parts);
+
+    public bool Equals(QualifiedName? other)
+    {
+        if (ReferenceEquals(this, other)) return true;
+        if (other is null) return false;
+        if (Parts.Count != other.Parts.Count) return false;
+        return !Parts.Where((t, i) => !string.Equals(t, other.Parts[i], StringComparison.Ordinal)).Any();
+    }
+
+    public override int GetHashCode()
+    {
+        var hc = new HashCode();
+        foreach (var p in Parts)
+            hc.Add(p, StringComparer.Ordinal);
+        return hc.ToHashCode();
+    }
 }
 
 public abstract record AstNode
@@ -22,6 +52,9 @@ public abstract record AstNode
 
 public record Unit(Stmt[] Stmts, QualifiedName PackageName) : AstNode
 {
+    public Lazy<Dictionary<QualifiedName, Decl>> Decls { get; } = new();
+    public HashSet<QualifiedName> Depend = [];
+
     public override T Accept<T>(AstVisitor<T> visitor)
     {
         return visitor.VisitUnit(this);
@@ -30,9 +63,12 @@ public record Unit(Stmt[] Stmts, QualifiedName PackageName) : AstNode
 
 public abstract record Stmt : AstNode;
 
-public abstract record Decl(QualifiedName Name) : Stmt;
+public abstract record Decl(string Name) : Stmt
+{
+    public QualifiedName? QualifiedName { get; set; } = null;
+}
 
-public record VarDecl(QualifiedName Name, Expr? TypeLit, Expr? Value) : Decl(Name)
+public record VarDecl(string Name, Expr? TypeLit, Expr? Value) : Decl(Name)
 {
     public override T Accept<T>(AstVisitor<T> visitor)
     {
@@ -48,11 +84,20 @@ public record FuncParam(string Name, Expr TypeLit) : Stmt
     }
 }
 
-public record FuncDecl(QualifiedName Name, Expr? TypeLit, FuncParam[] Args, Stmt[] Body) : Decl(Name)
+public record FuncDecl(string Name, Expr? TypeLit, FuncParam[] Args, Stmt[] Body) : Decl(Name)
 {
     public override T Accept<T>(AstVisitor<T> visitor)
     {
         return visitor.VisitFuncDecl(this);
+    }
+}
+
+// only in Symbol Pass
+public record BuiltinTypeDecl(string Name) : Decl(Name)
+{
+    public override T Accept<T>(AstVisitor<T> visitor)
+    {
+        throw new NotImplementedException();
     }
 }
 
