@@ -39,7 +39,7 @@ exprStmt
     ;
     
 expression
-    : left=expression OP right=expression #binaryOp
+    : left=expression op right=expression #binaryOp
     | IntLit #integer
     | qName #symbol
     ;
@@ -48,7 +48,10 @@ qName
     : (Identifier Colon Colon)* Identifier
     ;   
  
-OP: '+' | '-' | '*' | '/' | '%' | '==' | '!=' | '<' | '>' | '<=' | '>=';
+op
+    : '+' | '-' | '*' | '/' | '%' | '==' | '!=' | '<' | '>' | '<=' | '>=' 
+    | Assign
+    ;
     
 Var: 'var';
 Fun: 'fun';

@@ -5,6 +5,11 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/zi2ven/RiddleSharp</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/zi2ven/RiddleSharp</RepositoryUrl>
+        <Authors>zi2ven</Authors>
+        <Copyright>© 2025 zi2ven</Copyright>
     </PropertyGroup>
 
     <ItemGroup>

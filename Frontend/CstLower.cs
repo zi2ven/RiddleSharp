@@ -11,7 +11,7 @@ using Antlr4.Runtime.Tree;
 /// </summary>
 public class CstLower : RiddleBaseVisitor<AstNode>
 {
-    public AstNode Parse(string code)
+    public Unit Parse(string code)
     {
         var el = new ErrorListener(code);
         var input = new AntlrInputStream(code);
@@ -52,7 +52,7 @@ public class CstLower : RiddleBaseVisitor<AstNode>
             Environment.Exit(62);
         }
 
-        return VisitCompileUnit(tree);
+        return (VisitCompileUnit(tree) as Unit)!;
     }
 
     private T? LowerOrNull<T>(IParseTree? tree) where T : AstNode
@@ -121,7 +121,7 @@ public class CstLower : RiddleBaseVisitor<AstNode>
     {
         var left = LowerOrThrow<Expr>(context.left);
         var right = LowerOrThrow<Expr>(context.right);
-        return new BinaryOp(context.OP().GetText(), left, right);
+        return new BinaryOp(context.op().GetText(), left, right);
     }
 
     public override AstNode VisitFuncParam(RiddleParser.FuncParamContext context)

@@ -59,6 +59,12 @@ public record Unit(Stmt[] Stmts, QualifiedName PackageName) : AstNode
     {
         return visitor.VisitUnit(this);
     }
+
+    public override string ToString()
+    {
+        var s = string.Join(", ", Stmts.Select(s => s.ToString()));
+        return $"Unit{{ PackageName = {PackageName}, Statements = [{s}] }}";
+    }
 }
 
 public abstract record Stmt : AstNode;
@@ -89,6 +95,14 @@ public record FuncDecl(string Name, Expr? TypeLit, FuncParam[] Args, Stmt[] Body
     public override T Accept<T>(AstVisitor<T> visitor)
     {
         return visitor.VisitFuncDecl(this);
+    }
+
+    public override string ToString()
+    {
+        var args = string.Join(", ", Args.Select(s => s.ToString()));
+        var body = string.Join(", ", Body.Select(s => s.ToString()));
+        return
+            $"FuncDecl {{ Name = {Name}, QualifiedName = {QualifiedName}, TypeLit = {TypeLit}, Args = [{args}], Body = [{body}] }} }}";
     }
 }
 
@@ -134,6 +148,12 @@ public record Symbol(QualifiedName Name) : Expr
     public override T Accept<T>(AstVisitor<T> visitor)
     {
         return visitor.VisitSymbol(this);
+    }
+
+    public override string ToString()
+    {
+        var d = DeclReference != null && DeclReference.TryGetTarget(out _) ? "<found>" : "<unfound>";
+        return $"Symbol {{ Name = {Name}, DeclReference = {d} }}";
     }
 }
 

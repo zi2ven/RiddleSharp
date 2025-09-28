@@ -1,4 +1,3 @@
-using System.Collections;
 using RiddleSharp.Frontend;
 
 namespace RiddleSharp.Semantics;
@@ -15,14 +14,16 @@ internal sealed class SymbolTable
             decl = stack.Peek();
             return true;
         }
+
         decl = null!;
         return false;
     }
 
-    public SymbolTable()
+    public SymbolTable(bool needPrimitive = true)
     {
         Push();
         // init Primitive Type
+        if (!needPrimitive) return;
         foreach (var i in PrimitiveType.Decls.Values)
         {
             AddDecl(i);
@@ -77,9 +78,9 @@ internal sealed class SymbolTable
     }
 }
 
-internal class SymbolPass
+public static class SymbolPass
 {
-    public Unit[] Run(Unit[] units)
+    public static Unit[] Run(Unit[] units)
     {
         var unitMap = MergeUnits(units);
         var sorted = PackageTopo.SortUnits(unitMap.Values.ToArray());
@@ -98,7 +99,7 @@ internal class SymbolPass
 
             exportsByPkg[unit.PackageName] = exports;
         }
-        
+
         foreach (var unit in sorted)
         {
             _ = new SymbolVisitor(unit, exportsByPkg);
@@ -153,9 +154,9 @@ internal class SymbolPass
         {
             _unit = unit;
             _exportsByPkg = exportsByPkg;
-            
+
             PreDecl(unit.Stmts.OfType<Decl>().ToArray());
-            
+
             VisitUnit(unit);
         }
 
@@ -207,7 +208,9 @@ internal class SymbolPass
 
         public override object? VisitSymbol(Symbol node)
         {
-            var decl = node.Name.Parts.Count == 1 ? _table.GetDecl<Decl>(node.Name.Parts[0]) : ResolveQualified(node.Name);
+            var decl = node.Name.Parts.Count == 1
+                ? _table.GetDecl<Decl>(node.Name.Parts[0])
+                : ResolveQualified(node.Name);
 
             node.DeclReference = new WeakReference<Decl>(decl);
             return null;

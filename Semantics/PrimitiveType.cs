@@ -4,7 +4,7 @@ namespace RiddleSharp.Semantics;
 
 public static class PrimitiveType
 {
-    public static Dictionary<string, BuiltinTypeDecl> Decls = new()
+    public static readonly Dictionary<string, BuiltinTypeDecl> Decls = new()
     {
         ["int"] = new BuiltinTypeDecl("int"),
         ["bool"] = new BuiltinTypeDecl("bool"),

@@ -7,7 +7,7 @@ const string a = """
                  import test;
                  var a = test::b;
                  fun main()->int{
-                    var a = 1;
+                    var a = 1+1/1;
                  }
                  """;
 const string b = """
@@ -18,8 +18,15 @@ const string b = """
 var astLower = new CstLower();
 var u1 = astLower.Parse(a);
 var u2 = astLower.Parse(b);
-var sp = new SymbolPass();
 
-var x = sp.Run([(u2 as Unit)!,(u1 as Unit)!]);
+u1 = BinaryRotate.Run(u1);
+u2 = BinaryRotate.Run(u2);
 
-Console.WriteLine(x);
+var x = SymbolPass.Run([u2,u1]);
+
+var p = new AstPrinter();
+
+foreach (var i in x)
+{
+    Console.WriteLine(p.Visit(i));
+}
