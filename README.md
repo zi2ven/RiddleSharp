@@ -59,7 +59,7 @@ dotnet test
 
 ## 许可证
 
-（在此注明你的许可证，例如 MIT / Apache-2.0）
+Apache-2.0
 
 ## 致谢
 
