@@ -78,7 +78,9 @@ public abstract record Decl(string Name) : Stmt
 
 public record VarDecl(string Name, Expr? TypeLit, Expr? Value) : Decl(Name)
 {
+    public bool IsGlobal { get; set; } = false;
     public Ty? Type { get; set; } = null;
+
     public override T Accept<T>(AstVisitor<T> visitor)
     {
         return visitor.VisitVarDecl(this);
@@ -95,7 +97,9 @@ public record FuncParam(string Name, Expr TypeLit) : Stmt
 
 public record FuncDecl(string Name, Expr? TypeLit, FuncParam[] Args, Stmt[] Body) : Decl(Name)
 {
-    public Ty? Type { get; set; } = null;
+    public Ty? Type { get; set; }
+    public List<VarDecl> Alloc { get; set; } = [];
+
     public override T Accept<T>(AstVisitor<T> visitor)
     {
         return visitor.VisitFuncDecl(this);
@@ -145,9 +149,9 @@ public record Integer : Expr
     public Integer(int Value)
     {
         this.Value = Value;
-        Type = new Ty.IntTy();
+        Type = Ty.IntTy.Instance;
     }
-    
+
     public override T Accept<T>(AstVisitor<T> visitor)
     {
         return visitor.VisitInteger(this);

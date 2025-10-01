@@ -1,11 +1,12 @@
 ﻿using Antlr4.Runtime;
+using RiddleSharp.Background.Llvm;
 using RiddleSharp.Frontend;
 using RiddleSharp.Semantics;
 
 const string a = """
                  package main;
                  import test;
-                 var a = test::b;
+                 var a = 1;
                  fun main()->int{
                     var a = 1+1/1;
                  }
@@ -26,7 +27,9 @@ var x = SymbolPass.Run([u2,u1]);
 
 var tp = TypeInfer.Run(x);
 
-foreach (var i in x)
+foreach (var i in tp)
 {
     Console.WriteLine(i);
 }
+
+LlvmPass.Run(tp);

@@ -148,6 +148,8 @@ public static class SymbolPass
 
         private readonly Unit _unit;
         private readonly IReadOnlyDictionary<QualifiedName, Dictionary<string, Decl>> _exportsByPkg;
+        
+        private readonly Stack<FuncDecl> _funcStack = new();
 
         public SymbolVisitor(Unit unit,
             IReadOnlyDictionary<QualifiedName, Dictionary<string, Decl>> exportsByPkg)
@@ -180,7 +182,13 @@ public static class SymbolPass
 
         public override object? VisitVarDecl(VarDecl node)
         {
-            if (!_table.IsGlobal) _table.AddDecl(node);
+            if (!_table.IsGlobal)
+            {
+                _table.AddDecl(node);
+                _funcStack.Peek().Alloc.Add(node);
+            }
+
+            node.IsGlobal = _table.IsGlobal;
             return base.VisitVarDecl(node);
         }
 
@@ -192,8 +200,10 @@ public static class SymbolPass
             foreach (var i in node.Args) VisitOrNull(i);
 
             _table.Push();
+            _funcStack.Push(node);
             foreach (var i in node.Body) VisitOrNull(i);
             _table.Pop();
+            _funcStack.Pop();
 
             return null;
         }

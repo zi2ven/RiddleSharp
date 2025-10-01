@@ -30,6 +30,7 @@
 
     <ItemGroup>
       <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />
+      <PackageReference Include="Ubiquity.NET.Llvm" Version="20.1.8-delta" />
     </ItemGroup>
 
 </Project>

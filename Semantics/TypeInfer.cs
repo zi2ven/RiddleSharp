@@ -11,13 +11,21 @@ public static class TypeInfer
             var visitor = new TypeVisitor();
             visitor.Visit(unit);
         }
-        return [];
+
+        return units;
     }
 
     private class TypeVisitor : AstVisitor<object?>
     {
-        private Dictionary<Tuple<Ty, Ty, string>, Ty> _opType = [];
-        
+        private readonly Dictionary<(Ty, Ty, string), Ty> _opType = new()
+        {
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "+")] = Ty.IntTy.Instance,
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "-")] = Ty.IntTy.Instance,
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "*")] = Ty.IntTy.Instance,
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "/")] = Ty.IntTy.Instance,
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "%")] = Ty.IntTy.Instance,
+        };
+
         private static bool CheckType(Ty x, Ty y)
         {
             return x switch
@@ -29,7 +37,14 @@ public static class TypeInfer
 
         public override object? VisitBinaryOp(BinaryOp node)
         {
-            
+            Visit(node.Left);
+            Visit(node.Right);
+            if (!_opType.ContainsKey((node.Left.Type!, node.Right.Type!, node.Op)))
+            {
+                throw new Exception($"Unknown operator \'{node.Left.Type} {node.Op} {node.Right.Type} \'");
+            }
+
+            node.Type = _opType[(node.Left.Type!, node.Right.Type!, node.Op)];
             return base.VisitBinaryOp(node);
         }
 
@@ -61,20 +76,50 @@ public static class TypeInfer
             return null;
         }
 
+        public override object? VisitFuncDecl(FuncDecl node)
+        {
+            Ty returnType;
+            if (node.TypeLit is not null)
+            {
+                Visit(node.TypeLit);
+                returnType = node.TypeLit.Type!;
+            }
+            else
+            {
+                returnType = new Ty.VoidTy();
+            }
+
+            List<Ty> paramTypes = [];
+            foreach (var i in node.Args)
+            {
+                Visit(i.TypeLit);
+                paramTypes.Add(i.TypeLit.Type ?? throw new InvalidOperationException());
+            }
+
+            node.Type = new Ty.FuncTy(paramTypes, returnType);
+
+            foreach (var i in node.Body)
+            {
+                Visit(i);
+            }
+            
+            return null;
+        }
+
         public override object? VisitSymbol(Symbol node)
         {
             if (node.DeclReference is null || !node.DeclReference.TryGetTarget(out var decl))
             {
                 throw new Exception($"Symbol \'{node.Name}\' not have decl ref");
             }
-            
+
             node.Type = decl switch
             {
                 BuiltinTypeDecl b => b.Name switch
                 {
                     "void" => new Ty.VoidTy(),
                     "bool" => new Ty.BoolTy(),
-                    "int" => new Ty.IntTy(),
+                    "int" => Ty.IntTy.Instance,
                     _ => throw new NotImplementedException($"Builtin type \'{b.Name}\' not implemented")
                 },
                 VarDecl v => v.Type,

@@ -2,7 +2,11 @@
 
 public abstract record Ty
 {
-    public sealed record IntTy : Ty;
+    public sealed record IntTy : Ty
+    {
+        private IntTy() {}
+        public static readonly IntTy Instance = new();
+    }
 
     public sealed record BoolTy : Ty;
     
