@@ -24,9 +24,9 @@ u2 = BinaryRotate.Run(u2);
 
 var x = SymbolPass.Run([u2,u1]);
 
-var p = new AstPrinter();
+var tp = TypeInfer.Run(x);
 
 foreach (var i in x)
 {
-    Console.WriteLine(p.Visit(i));
+    Console.WriteLine(i);
 }

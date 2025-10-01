@@ -1,4 +1,6 @@
-﻿namespace RiddleSharp.Frontend;
+﻿using RiddleSharp.Semantics;
+
+namespace RiddleSharp.Frontend;
 
 public sealed record QualifiedName(IReadOnlyList<string> Parts)
 {
@@ -71,11 +73,12 @@ public abstract record Stmt : AstNode;
 
 public abstract record Decl(string Name) : Stmt
 {
-    public QualifiedName? QualifiedName { get; set; } = null;
+    public QualifiedName? QualifiedName { get; set; }
 }
 
 public record VarDecl(string Name, Expr? TypeLit, Expr? Value) : Decl(Name)
 {
+    public Ty? Type { get; set; } = null;
     public override T Accept<T>(AstVisitor<T> visitor)
     {
         return visitor.VisitVarDecl(this);
@@ -92,6 +95,7 @@ public record FuncParam(string Name, Expr TypeLit) : Stmt
 
 public record FuncDecl(string Name, Expr? TypeLit, FuncParam[] Args, Stmt[] Body) : Decl(Name)
 {
+    public Ty? Type { get; set; } = null;
     public override T Accept<T>(AstVisitor<T> visitor)
     {
         return visitor.VisitFuncDecl(this);
@@ -131,19 +135,30 @@ public record Block(Stmt[] Body) : Stmt
     }
 }
 
-public abstract record Expr : AstNode;
-
-public record Integer(int Value) : Expr
+public abstract record Expr : AstNode
 {
+    public Ty? Type { get; set; }
+}
+
+public record Integer : Expr
+{
+    public Integer(int Value)
+    {
+        this.Value = Value;
+        Type = new Ty.IntTy();
+    }
+    
     public override T Accept<T>(AstVisitor<T> visitor)
     {
         return visitor.VisitInteger(this);
     }
+
+    public int Value { get; }
 }
 
 public record Symbol(QualifiedName Name) : Expr
 {
-    public WeakReference<Decl>? DeclReference { get; set; } = null;
+    public WeakReference<Decl>? DeclReference { get; set; }
 
     public override T Accept<T>(AstVisitor<T> visitor)
     {
