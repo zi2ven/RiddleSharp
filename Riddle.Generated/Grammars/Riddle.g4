@@ -39,7 +39,8 @@ exprStmt
     ;
     
 expression
-    : left=expression op right=expression #binaryOp
+    : callee=expression LParen (args+=expression (Comma args+=expression)*)? RParen #call
+    | left=expression op right=expression #binaryOp
     | IntLit #integer
     | qName #symbol
     ;

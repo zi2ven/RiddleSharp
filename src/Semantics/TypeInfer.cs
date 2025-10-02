@@ -24,6 +24,13 @@ public static class TypeInfer
             [(Ty.IntTy.Instance, Ty.IntTy.Instance, "*")] = Ty.IntTy.Instance,
             [(Ty.IntTy.Instance, Ty.IntTy.Instance, "/")] = Ty.IntTy.Instance,
             [(Ty.IntTy.Instance, Ty.IntTy.Instance, "%")] = Ty.IntTy.Instance,
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "=")] = Ty.IntTy.Instance,
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "==")] = Ty.BoolTy.Instance,
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "!=")] = Ty.BoolTy.Instance,
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "<")] = Ty.BoolTy.Instance,
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "<=")] = Ty.BoolTy.Instance,
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, ">")] = Ty.BoolTy.Instance,
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, ">=")] = Ty.BoolTy.Instance,
         };
 
         private static bool CheckType(Ty x, Ty y)
@@ -102,7 +109,7 @@ public static class TypeInfer
             {
                 Visit(i);
             }
-            
+
             return null;
         }
 
@@ -118,14 +125,45 @@ public static class TypeInfer
                 BuiltinTypeDecl b => b.Name switch
                 {
                     "void" => new Ty.VoidTy(),
-                    "bool" => new Ty.BoolTy(),
+                    "bool" => Ty.BoolTy.Instance,
                     "int" => Ty.IntTy.Instance,
                     _ => throw new NotImplementedException($"Builtin type \'{b.Name}\' not implemented")
                 },
                 VarDecl v => v.Type,
-                FuncDecl f => f.Type,
+                FuncDecl f => (f.Type as Ty.FuncTy)!.Ret,
                 _ => throw new NotImplementedException()
             };
+
+            return null;
+        }
+
+        public override object? VisitCall(Call node)
+        {
+            Visit(node.Callee);
+            switch (node.Callee)
+            {
+                case Symbol s:
+                    if (s.DeclReference is null || !s.DeclReference.TryGetTarget(out var decl))
+                    {
+                        throw new Exception("Decl reference not found");
+                    }
+
+                    if (decl is not FuncDecl f)
+                    {
+                        throw new Exception("Call Function Decl not implemented");
+                    }
+
+                    node.Type = (f.Type as Ty.FuncTy)!.Ret;
+
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
+
+            foreach (var i in node.Args)
+            {
+                Visit(i);
+            }
 
             return null;
         }

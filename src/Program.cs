@@ -23,7 +23,8 @@ public static class Program
                          var a = test::b;
                          fun main(x:int)->int{
                             var a = 1+1/1;
-                            var b = a+1;
+                            var b = main(a);
+                            a = b;
                          }
                          """;
         const string b = """

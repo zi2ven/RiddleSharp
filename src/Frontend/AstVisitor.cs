@@ -68,4 +68,14 @@ public abstract class AstVisitor<T>
         Visit(node.Right);
         return default!;
     }
+
+    public virtual T VisitCall(Call node)
+    {
+        Visit(node.Callee);
+        foreach (var i in node.Args)
+        {
+            Visit(i);
+        }
+        return default!;
+    }
 }

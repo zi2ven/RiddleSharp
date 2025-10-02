@@ -56,6 +56,7 @@ public static class BinaryRotate
     private static Expr RewriteExpr(Expr e) => e switch
     {
         BinaryOp b => Rotate(new BinaryOp(b.Op, RewriteExpr(b.Left), RewriteExpr(b.Right))),
+        Call c => new Call(RewriteExpr(c.Callee),c.Args.Select(RewriteExpr).ToArray()),
         _ => e
     };
 

@@ -83,7 +83,7 @@ public class CstLower : RiddleBaseVisitor<AstNode>
         {
             package = QualifiedName.Parse(context.packageStmt().name.GetText());
         }
-        
+
         var depends = new HashSet<QualifiedName>();
 
         foreach (var stmt in context.importStmt())
@@ -142,5 +142,11 @@ public class CstLower : RiddleBaseVisitor<AstNode>
     {
         var stmt = context.statememt().Select(LowerOrThrow<Stmt>).ToArray();
         return new Block(stmt);
+    }
+
+    public override AstNode VisitCall(RiddleParser.CallContext context)
+    {
+        var args = context._args.Select(LowerOrThrow<Expr>).ToList();
+        return new Call(LowerOrThrow<Expr>(context.callee), args.ToArray());
     }
 }

@@ -241,20 +241,20 @@ public static class SymbolPass
             }
 
             if (best is null)
-                throw new Exception($"'{qn}' 未找到：没有匹配的已导入包前缀");
+                throw new Exception($"'{qn}' not found: no matching imported package prefix");
 
             if (!_exportsByPkg.TryGetValue(best, out var exports))
-                throw new Exception($"包 '{best}' 不存在或没有导出");
+                throw new Exception($"Package '{best}' does not exist or has no exports");
 
             var remaining = parts.Count - best.Parts.Count;
             if (remaining == 1)
             {
                 var member = parts[^1];
-                return !exports.TryGetValue(member, out var d) ? throw new Exception($"'{best}::{member}' 未导出") : d;
+                return !exports.TryGetValue(member, out var d) ? throw new Exception($"'{best}::{member}' is not exported") : d;
             }
 
-            // todo 符号内成员
-            throw new NotImplementedException($"暂不支持多级成员访问：'{qn}'");
+            // todo Members within symbols
+            throw new NotImplementedException($"Multi-level member access not supported yet: '{qn}'");
 
             IEnumerable<QualifiedName> Candidates()
             {

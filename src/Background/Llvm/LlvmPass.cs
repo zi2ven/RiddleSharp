@@ -1,10 +1,14 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Reflection;
+using System.Runtime.CompilerServices;
 using RiddleSharp.Frontend;
 using RiddleSharp.Semantics;
 using Ubiquity.NET.Llvm;
 using Ubiquity.NET.Llvm.Instructions;
+using Ubiquity.NET.Llvm.Interop;
+using Ubiquity.NET.Llvm.Interop.ABI.llvm_c;
 using Ubiquity.NET.Llvm.Types;
 using Ubiquity.NET.Llvm.Values;
+using Module = Ubiquity.NET.Llvm.Module;
 
 namespace RiddleSharp.Background.Llvm;
 
@@ -13,18 +17,43 @@ public static class LlvmPass
     public static void Run(Unit[] units)
     {
         ConditionalWeakTable<VarDecl, Value> vars = new();
+        ConditionalWeakTable<FuncDecl, Value> functions = new();
         using var context = new Context();
         using var module = context.CreateBitcodeModule();
         foreach (var unit in units)
         {
-            var v = new LlvmVisitor(context, module, vars);
+            var v = new LlvmVisitor(context, module, vars, functions);
             v.Visit(unit);
         }
 
         Console.WriteLine(module.WriteToString());
     }
 
-    private class LlvmVisitor(Context context, Module module, ConditionalWeakTable<VarDecl, Value> vars)
+    private static object? GetHiddenHandle(object inst)
+    {
+        var t = inst.GetType();
+        
+        var p = t.GetProperty("Handle", BindingFlags.NonPublic | BindingFlags.Instance);
+        if (p != null) return p.GetValue(inst);
+        
+        foreach (var f in t.GetFields(BindingFlags.NonPublic | BindingFlags.Instance))
+            if (f.Name.Contains("Handle", StringComparison.OrdinalIgnoreCase) ||
+                f.FieldType.Name.Contains("ValueRef", StringComparison.OrdinalIgnoreCase) ||
+                f.FieldType == typeof(IntPtr))
+                return f.GetValue(inst);
+
+        return (from gp in t.GetProperties(BindingFlags.NonPublic | BindingFlags.Instance)
+            where gp.Name.Contains("Handle", StringComparison.OrdinalIgnoreCase) ||
+                  gp.PropertyType.Name.Contains("ValueRef", StringComparison.OrdinalIgnoreCase) ||
+                  gp.PropertyType == typeof(IntPtr)
+            select gp.GetValue(inst)).FirstOrDefault();
+    }
+
+    private class LlvmVisitor(
+        Context context,
+        Module module,
+        ConditionalWeakTable<VarDecl, Value> vars,
+        ConditionalWeakTable<FuncDecl, Value> functions)
         : AstVisitor<Value>
     {
         private readonly InstructionBuilder _builder = new(context);
@@ -35,12 +64,36 @@ public static class LlvmPass
             [(Ty.IntTy.Instance, Ty.IntTy.Instance, "-")] = (x, y, builder) => builder.Sub(x, y),
             [(Ty.IntTy.Instance, Ty.IntTy.Instance, "*")] = (x, y, builder) => builder.Mul(x, y),
             [(Ty.IntTy.Instance, Ty.IntTy.Instance, "/")] = (x, y, builder) => builder.SDiv(x, y),
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "%")] = (x, y, builder) => builder.SRem(x, y)
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "%")] = (x, y, builder) => builder.SRem(x, y),
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "=")] =
+                (x, y, builder) =>
+                {
+                    var l = (x as Load)!;
+                    Core.LLVMInstructionEraseFromParent((LLVMValueRef)GetHiddenHandle(l)!);
+                    return builder.Store(y, l.Operands[0]!);
+                },
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "==")] =
+                (x, y, builder) => builder.Compare(IntPredicate.Equal, x, y),
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "!=")] =
+                (x, y, builder) => builder.Compare(IntPredicate.NotEqual, x, y),
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "<")] =
+                (x, y, builder) => builder.Compare(IntPredicate.SignedLessThan, x, y),
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "<=")] = (x, y, builder) =>
+                builder.Compare(IntPredicate.SignedLessThanOrEqual, x, y),
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, ">")] =
+                (x, y, builder) => builder.Compare(IntPredicate.SignedGreaterThan, x, y),
+            [(Ty.IntTy.Instance, Ty.IntTy.Instance, ">=")] = (x, y, builder) =>
+                builder.Compare(IntPredicate.SignedGreaterThanOrEqual, x, y),
         };
 
         private Value GetVarAlloc(VarDecl var)
         {
             return vars.GetOrCreateValue(var);
+        }
+
+        private Value GetFunc(FuncDecl func)
+        {
+            return functions.GetOrCreateValue(func);
         }
 
         private T? VisitOrNull<T>(AstNode? node) where T : Value
@@ -70,8 +123,16 @@ public static class LlvmPass
 
         public override Value VisitFuncDecl(FuncDecl node)
         {
+            var name = node.QualifiedName!.ToString();
+            // 做 main
+            if (node.Name == "main")
+            {
+                name = "main";
+            }
+
             var fty = (IFunctionType)ParseType(node.Type!);
-            var func = module.CreateFunction(node.Name, fty);
+            var func = module.CreateFunction(name, fty);
+            functions.Add(node, func);
             var entry = func.AppendBasicBlock("entry");
             _builder.PositionAtEnd(entry);
 
@@ -109,6 +170,19 @@ public static class LlvmPass
             return null!;
         }
 
+        public override Value VisitCall(Call node)
+        {
+            var callee = Visit(node.Callee);
+            if (callee is not Function f)
+            {
+                throw new Exception("Call is not of type function");
+            }
+
+            var args = node.Args.Select(Visit).ToList();
+
+            return _builder.Call(f, args);
+        }
+
         public override Value VisitSymbol(Symbol node)
         {
             if (node.DeclReference is null || !node.DeclReference.TryGetTarget(out var d))
@@ -116,11 +190,15 @@ public static class LlvmPass
                 throw new Exception("Symbol is already declared");
             }
 
-            return d switch
+            switch (d)
             {
-                VarDecl v => v.IsGlobal ? GetVarAlloc(v) : _builder.Load(ParseType(node.Type!), GetVarAlloc(v)),
-                _ => throw new NotImplementedException()
-            };
+                case VarDecl v:
+                    return v.IsGlobal ? GetVarAlloc(v) : _builder.Load(ParseType(v.Type!), GetVarAlloc(v));
+                case FuncDecl f:
+                    return GetFunc(f);
+                default:
+                    throw new NotImplementedException();
+            }
         }
 
         public override Value VisitInteger(Integer node)

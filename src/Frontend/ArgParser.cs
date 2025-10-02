@@ -26,6 +26,9 @@ internal sealed class CompileCommand : Command<CompileSettings>
     }
 }
 
+/// <summary>
+/// 提供命令行参数解析功能。
+/// </summary>
 public static class ArgParser
 {
 

@@ -91,8 +91,8 @@ public abstract record Decl(string Name) : Stmt
 
 public record VarDecl(string Name, Expr? TypeLit, Expr? Value) : Decl(Name)
 {
-    public bool IsGlobal { get; set; } = false;
-    public Ty? Type { get; set; } = null;
+    public bool IsGlobal { get; set; }
+    public Ty? Type { get; set; }
 
     public override T Accept<T>(AstVisitor<T> visitor)
     {
@@ -194,5 +194,13 @@ public record BinaryOp(string Op, Expr Left, Expr Right) : Expr
     public override T Accept<T>(AstVisitor<T> visitor)
     {
         return visitor.VisitBinaryOp(this);
+    }
+}
+
+public record Call(Expr Callee, Expr[] Args) : Expr
+{
+    public override T Accept<T>(AstVisitor<T> visitor)
+    {
+        return visitor.VisitCall(this);
     }
 }

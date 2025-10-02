@@ -8,7 +8,11 @@ public abstract record Ty
         public static readonly IntTy Instance = new();
     }
 
-    public sealed record BoolTy : Ty;
+    public sealed record BoolTy : Ty
+    {
+        private BoolTy() {}
+        public static readonly BoolTy Instance = new();
+    }
     
     public sealed record VoidTy : Ty;
     
