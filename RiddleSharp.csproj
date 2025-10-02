@@ -14,22 +14,30 @@
 
     <ItemGroup>
       <Compile Remove="Riddle.Generated\**" />
+      <Compile Remove="third_party\**" />
+      <Compile Remove="UnitTest\**" />
     </ItemGroup>
 
     <ItemGroup>
       <EmbeddedResource Remove="Riddle.Generated\**" />
+      <EmbeddedResource Remove="third_party\**" />
+      <EmbeddedResource Remove="UnitTest\**" />
     </ItemGroup>
 
     <ItemGroup>
       <None Remove="Riddle.Generated\**" />
+      <None Remove="third_party\**" />
+      <None Remove="UnitTest\**" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="Riddle.Generated\Riddle.Generated.csproj" />
+      <ProjectReference Include="third_party\LG-CSharp\LGenerator.csproj" />
     </ItemGroup>
 
     <ItemGroup>
       <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />
+      <PackageReference Include="Spectre.Console.Cli" Version="0.51.2-preview.0.2" />
       <PackageReference Include="Ubiquity.NET.Llvm" Version="20.1.8-delta" />
     </ItemGroup>
 

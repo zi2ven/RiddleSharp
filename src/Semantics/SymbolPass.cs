@@ -197,7 +197,7 @@ public static class SymbolPass
             if (!_table.IsGlobal) _table.AddDecl(node);
 
             VisitOrNull(node.TypeLit);
-            foreach (var i in node.Args) VisitOrNull(i);
+            foreach (var i in node.Args) VisitOrNull(i.TypeLit);
 
             _table.Push();
             _funcStack.Push(node);

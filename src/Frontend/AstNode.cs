@@ -52,10 +52,10 @@ public abstract record AstNode
     public abstract T Accept<T>(AstVisitor<T> visitor);
 }
 
-public record Unit(Stmt[] Stmts, QualifiedName PackageName) : AstNode
+public sealed record Unit(Stmt[] Stmts, QualifiedName PackageName) : AstNode
 {
     public Lazy<Dictionary<QualifiedName, Decl>> Decls { get; } = new();
-    public HashSet<QualifiedName> Depend = [];
+    public HashSet<QualifiedName> Depend { get; init; } = [];
 
     public override T Accept<T>(AstVisitor<T> visitor)
     {
@@ -65,7 +65,20 @@ public record Unit(Stmt[] Stmts, QualifiedName PackageName) : AstNode
     public override string ToString()
     {
         var s = string.Join(", ", Stmts.Select(s => s.ToString()));
-        return $"Unit{{ PackageName = {PackageName}, Statements = [{s}] }}";
+        return $"Unit{{ PackageName = {PackageName}, Stmts = [{s}] }}";
+    }
+
+    public bool Equals(Unit? other)
+    {
+        if (other is null) return false;
+        if (PackageName != other.PackageName) return false;
+        if (Stmts.Length != other.Stmts.Length) return false;
+        return !Stmts.Where((t, i) => !t.Equals(other.Stmts[i])).Any();
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(base.GetHashCode(), Depend, Decls, Stmts, PackageName);
     }
 }
 
