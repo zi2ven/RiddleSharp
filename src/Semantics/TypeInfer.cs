@@ -99,8 +99,9 @@ public static class TypeInfer
             List<Ty> paramTypes = [];
             foreach (var i in node.Args)
             {
-                Visit(i.TypeLit);
-                paramTypes.Add(i.TypeLit.Type ?? throw new InvalidOperationException());
+                Visit(i.TypeLit!);
+                i.Type = i.TypeLit!.Type;
+                paramTypes.Add(i.TypeLit!.Type ?? throw new InvalidOperationException());
             }
 
             node.Type = new Ty.FuncTy(paramTypes, returnType);

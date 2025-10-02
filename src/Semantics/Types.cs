@@ -15,6 +15,21 @@ public abstract record Ty
     }
     
     public sealed record VoidTy : Ty;
-    
-    public sealed record FuncTy(IReadOnlyList<Ty> Args, Ty Ret) : Ty;
+
+    public sealed record FuncTy(IReadOnlyList<Ty> Args, Ty Ret) : Ty
+    {
+        public bool Equals(FuncTy? other)
+            => other is not null
+               && Ret == other.Ret
+               && Args.Count == other.Args.Count
+               && Args.SequenceEqual(other.Args);
+
+        public override int GetHashCode()
+        {
+            var hc = new HashCode();
+            foreach (var a in Args) hc.Add(a);
+            hc.Add(Ret);
+            return hc.ToHashCode();
+        }
+    }
 }

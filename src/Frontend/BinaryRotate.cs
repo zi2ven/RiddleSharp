@@ -50,13 +50,15 @@ public static class BinaryRotate
             fd.Body.Select(RewriteStmt).ToArray()
         ),
 
+        Return res => new Return(res.Expr is null ? null : RewriteExpr(res.Expr)),
+
         _ => s
     };
 
     private static Expr RewriteExpr(Expr e) => e switch
     {
         BinaryOp b => Rotate(new BinaryOp(b.Op, RewriteExpr(b.Left), RewriteExpr(b.Right))),
-        Call c => new Call(RewriteExpr(c.Callee),c.Args.Select(RewriteExpr).ToArray()),
+        Call c => new Call(RewriteExpr(c.Callee), c.Args.Select(RewriteExpr).ToArray()),
         _ => e
     };
 

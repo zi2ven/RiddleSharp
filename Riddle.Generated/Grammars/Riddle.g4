@@ -8,6 +8,7 @@ statememt
     : varDecl
     | funcDecl
     | exprStmt
+    | returnStmt
     ;
 
 packageStmt
@@ -34,6 +35,10 @@ block
     : LBrace statememt* RBrace
     ;    
 
+returnStmt
+    : Return (result=expression)? Semi
+    ;
+
 exprStmt
     : expression Semi
     ;
@@ -58,6 +63,7 @@ Var: 'var';
 Fun: 'fun';
 Package: 'package' ;
 Import: 'import' ;
+Return: 'return' ;
 
 Semi: ';';
 Colon: ':';

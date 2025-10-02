@@ -78,4 +78,14 @@ public abstract class AstVisitor<T>
         }
         return default!;
     }
+
+    public virtual T VisitReturn(Return node)
+    {
+        if (node.Expr is not null)
+        {
+            Visit(node.Expr);
+        }
+
+        return default!;
+    }
 }

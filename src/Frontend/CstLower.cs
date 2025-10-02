@@ -149,4 +149,9 @@ public class CstLower : RiddleBaseVisitor<AstNode>
         var args = context._args.Select(LowerOrThrow<Expr>).ToList();
         return new Call(LowerOrThrow<Expr>(context.callee), args.ToArray());
     }
+
+    public override AstNode VisitReturnStmt(RiddleParser.ReturnStmtContext context)
+    {
+        return new Return(LowerOrNull<Expr>(context.result));
+    }
 }

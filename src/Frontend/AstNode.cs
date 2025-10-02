@@ -100,7 +100,7 @@ public record VarDecl(string Name, Expr? TypeLit, Expr? Value) : Decl(Name)
     }
 }
 
-public record FuncParam(string Name, Expr TypeLit) : Stmt
+public record FuncParam(string Name, Expr TypeLit) : VarDecl(Name, TypeLit, null)
 {
     public override T Accept<T>(AstVisitor<T> visitor)
     {
@@ -149,6 +149,14 @@ public record Block(Stmt[] Body) : Stmt
     public override T Accept<T>(AstVisitor<T> visitor)
     {
         return visitor.VisitBlock(this);
+    }
+}
+
+public record Return(Expr? Expr) : Stmt
+{
+    public override T Accept<T>(AstVisitor<T> visitor)
+    {
+        return visitor.VisitReturn(this);
     }
 }
 

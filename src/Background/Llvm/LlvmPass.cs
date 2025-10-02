@@ -32,10 +32,11 @@ public static class LlvmPass
     private static object? GetHiddenHandle(object inst)
     {
         var t = inst.GetType();
-        
+
+
         var p = t.GetProperty("Handle", BindingFlags.NonPublic | BindingFlags.Instance);
         if (p != null) return p.GetValue(inst);
-        
+
         foreach (var f in t.GetFields(BindingFlags.NonPublic | BindingFlags.Instance))
             if (f.Name.Contains("Handle", StringComparison.OrdinalIgnoreCase) ||
                 f.FieldType.Name.Contains("ValueRef", StringComparison.OrdinalIgnoreCase) ||
@@ -136,6 +137,13 @@ public static class LlvmPass
             var entry = func.AppendBasicBlock("entry");
             _builder.PositionAtEnd(entry);
 
+
+            for (var i = 0; i <node.Args.Length; i++)
+            {
+                var alloca = func.Parameters[i];
+                vars.Add(node.Args[i], alloca);
+            }
+
             foreach (var a in node.Alloc)
             {
                 var alloca = _builder.Alloca(ParseType(a.Type!));
@@ -190,15 +198,13 @@ public static class LlvmPass
                 throw new Exception("Symbol is already declared");
             }
 
-            switch (d)
+            return d switch
             {
-                case VarDecl v:
-                    return v.IsGlobal ? GetVarAlloc(v) : _builder.Load(ParseType(v.Type!), GetVarAlloc(v));
-                case FuncDecl f:
-                    return GetFunc(f);
-                default:
-                    throw new NotImplementedException();
-            }
+                FuncParam p => GetVarAlloc(p),
+                VarDecl v => v.IsGlobal ? GetVarAlloc(v) : _builder.Load(ParseType(v.Type!), GetVarAlloc(v)),
+                FuncDecl f => GetFunc(f),
+                _ => throw new NotImplementedException()
+            };
         }
 
         public override Value VisitInteger(Integer node)
@@ -216,6 +222,15 @@ public static class LlvmPass
             }
 
             return value(Visit(node.Left), Visit(node.Right), _builder);
+        }
+
+        public override Value VisitReturn(Return node)
+        {
+            return node.Expr switch
+            {
+                null => _builder.Return(),
+                _ => _builder.Return(Visit(node.Expr))
+            };
         }
     }
 }
