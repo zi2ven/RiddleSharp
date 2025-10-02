@@ -148,7 +148,7 @@ public static class SymbolPass
 
         private readonly Unit _unit;
         private readonly IReadOnlyDictionary<QualifiedName, Dictionary<string, Decl>> _exportsByPkg;
-        
+
         private readonly Stack<FuncDecl> _funcStack = new();
 
         public SymbolVisitor(Unit unit,
@@ -204,10 +204,35 @@ public static class SymbolPass
                 VisitOrNull(i.TypeLit);
                 _table.AddDecl(i);
             }
+
             foreach (var i in node.Body) VisitOrNull(i);
             _table.Pop();
             _funcStack.Pop();
 
+            return null;
+        }
+
+        public override object? VisitIf(If node)
+        {
+            Visit(node.Condition);
+            _table.Push();
+            Visit(node.Then);
+            _table.Pop();
+
+            if (node.Else is null) return null;
+            _table.Push();
+            Visit(node.Else);
+            _table.Pop();
+
+            return null;
+        }
+
+        public override object? VisitWhile(While node)
+        {
+            Visit(node.Condition);
+            _table.Push();
+            Visit(node.Body);
+            _table.Pop();
             return null;
         }
 
@@ -253,7 +278,9 @@ public static class SymbolPass
             if (remaining == 1)
             {
                 var member = parts[^1];
-                return !exports.TryGetValue(member, out var d) ? throw new Exception($"'{best}::{member}' is not exported") : d;
+                return !exports.TryGetValue(member, out var d)
+                    ? throw new Exception($"'{best}::{member}' is not exported")
+                    : d;
             }
 
             // todo Members within symbols

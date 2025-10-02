@@ -46,9 +46,16 @@ public static class BinaryRotate
         FuncDecl fd => new FuncDecl(
             fd.Name,
             fd.TypeLit is null ? null : RewriteExpr(fd.TypeLit),
-            fd.Args.Select(a => new FuncParam(a.Name, RewriteExpr(a.TypeLit))).ToArray(),
+            fd.Args.Select(a => new FuncParam(a.Name, RewriteExpr(a.TypeLit!))).ToArray(),
             fd.Body.Select(RewriteStmt).ToArray()
         ),
+
+        If @if => new If(
+            RewriteExpr(@if.Condition),
+            RewriteStmt(@if.Then),
+            @if.Else is null ? null : RewriteStmt(@if.Else)),
+
+        While @while => new While(RewriteExpr(@while.Condition), RewriteStmt(@while.Body)),
 
         Return res => new Return(res.Expr is null ? null : RewriteExpr(res.Expr)),
 

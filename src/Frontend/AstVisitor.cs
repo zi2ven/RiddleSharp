@@ -88,4 +88,23 @@ public abstract class AstVisitor<T>
 
         return default!;
     }
+
+    public virtual T VisitIf(If node)
+    {
+        Visit(node.Condition);
+        Visit(node.Then);
+        if (node.Else is not null)
+        {
+            Visit(node.Else);
+        }
+
+        return default!;
+    }
+
+    public virtual T VisitWhile(While node)
+    {
+        Visit(node.Condition);
+        Visit(node.Body);
+        return default!;
+    }
 }

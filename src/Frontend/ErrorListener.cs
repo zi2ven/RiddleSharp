@@ -21,7 +21,7 @@ public sealed class ErrorListener(string source, string? fileName = null, int ta
         var reason = ClassifyReason(e!, msg);
 
         BuildOne(line, charPositionInLine,
-            tokenText: offendingSymbol.Text,
+            tokenText: offendingSymbol!.Text,
             tokenLen: offendingSymbol.Type == TokenConstants.EOF
                 ? 1
                 : Math.Max(1, offendingSymbol.StopIndex - offendingSymbol.StartIndex + 1),

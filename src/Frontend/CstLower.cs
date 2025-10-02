@@ -154,4 +154,19 @@ public class CstLower : RiddleBaseVisitor<AstNode>
     {
         return new Return(LowerOrNull<Expr>(context.result));
     }
+
+    public override AstNode VisitIfStmt(RiddleParser.IfStmtContext context)
+    {
+        return new If(
+            LowerOrThrow<Expr>(context.cond),
+            LowerOrThrow<Stmt>(context.then),
+            LowerOrNull<Stmt>(context.@else));
+    }
+
+    public override AstNode VisitWhileStmt(RiddleParser.WhileStmtContext context)
+    {
+        return new While(
+            LowerOrThrow<Expr>(context.cond),
+            LowerOrThrow<Stmt>(context.body));
+    }
 }

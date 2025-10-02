@@ -138,7 +138,7 @@ public static class LlvmPass
             _builder.PositionAtEnd(entry);
 
 
-            for (var i = 0; i <node.Args.Length; i++)
+            for (var i = 0; i < node.Args.Length; i++)
             {
                 var alloca = func.Parameters[i];
                 vars.Add(node.Args[i], alloca);
@@ -231,6 +231,56 @@ public static class LlvmPass
                 null => _builder.Return(),
                 _ => _builder.Return(Visit(node.Expr))
             };
+        }
+
+        public override Value VisitIf(If node)
+        {
+            var nowFunc = _builder.InsertFunction!;
+            var cond = Visit(node.Condition);
+            var thenBb = nowFunc.AppendBasicBlock("");
+            BasicBlock? elseBb = null;
+            var exitBb = nowFunc.AppendBasicBlock("");
+
+            if (node.Else is not null)
+            {
+                elseBb = nowFunc.AppendBasicBlock("");
+            }
+
+            _builder.Branch(cond, thenBb, elseBb ?? exitBb);
+
+            _builder.PositionAtEnd(thenBb);
+            Visit(node.Then);
+            _builder.Branch(exitBb);
+
+            if (node.Else is not null)
+            {
+                _builder.PositionAtEnd(elseBb!);
+                Visit(node.Else);
+                _builder.Branch(exitBb);
+            }
+
+            _builder.PositionAtEnd(exitBb);
+            return null!;
+        }
+
+        public override Value VisitWhile(While node)
+        {
+            var nowFunc = _builder.InsertFunction!;
+            var condBb = nowFunc.AppendBasicBlock("");
+            var loopBb = nowFunc.AppendBasicBlock("");
+            var exitBb = nowFunc.AppendBasicBlock("");
+            _builder.Branch(condBb);
+            
+            _builder.PositionAtEnd(condBb);
+            var cond = Visit(node.Condition);
+            _builder.Branch(cond, loopBb, exitBb);
+            
+            _builder.PositionAtEnd(loopBb);
+            Visit(node.Body);
+            _builder.Branch(exitBb);
+            
+            _builder.PositionAtEnd(exitBb);
+            return null!;
         }
     }
 }

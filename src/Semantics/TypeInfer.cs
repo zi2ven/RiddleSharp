@@ -168,5 +168,34 @@ public static class TypeInfer
 
             return null;
         }
+
+        public override object? VisitIf(If node)
+        {
+            Visit(node.Condition);
+            if (node.Condition.Type is not Ty.BoolTy)
+            {
+                throw new Exception("If condition must be boolean");
+            }
+
+            Visit(node.Then);
+            if (node.Else is not null)
+            {
+                Visit(node.Else);
+            }
+
+            return null;
+        }
+
+        public override object? VisitWhile(While node)
+        {
+            Visit(node.Condition);
+            if (node.Condition.Type is not Ty.BoolTy)
+            {
+                throw new Exception("While condition must be boolean");
+            }
+
+            Visit(node.Body);
+            return null;
+        }
     }
 }

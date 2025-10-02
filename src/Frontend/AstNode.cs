@@ -160,6 +160,22 @@ public record Return(Expr? Expr) : Stmt
     }
 }
 
+public record If(Expr Condition, Stmt Then, Stmt? Else) : Stmt
+{
+    public override T Accept<T>(AstVisitor<T> visitor)
+    {
+        return visitor.VisitIf(this);
+    }
+}
+
+public record While(Expr Condition, Stmt Body) : Stmt
+{
+    public override T Accept<T>(AstVisitor<T> visitor)
+    {
+        return visitor.VisitWhile(this);
+    }
+}
+
 public abstract record Expr : AstNode
 {
     public Ty? Type { get; set; }

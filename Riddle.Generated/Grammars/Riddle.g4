@@ -5,10 +5,13 @@ compileUnit
     ;
     
 statememt
-    : varDecl
+    : block
+    | varDecl
     | funcDecl
     | exprStmt
     | returnStmt
+    | ifStmt
+    | whileStmt
     ;
 
 packageStmt
@@ -29,6 +32,14 @@ funcParam
 
 funcDecl
     : Fun name=Identifier LParen (funcParam (Comma funcParam)*)? RParen (Arrow type=expression)? ((body=block)|Semi)
+    ;
+    
+ifStmt
+    : If LParen cond=expression RParen then=statememt (Else else=statememt)?
+    ;
+    
+whileStmt
+    : While LParen cond=expression RParen body=statememt
     ;
     
 block
@@ -64,6 +75,9 @@ Fun: 'fun';
 Package: 'package' ;
 Import: 'import' ;
 Return: 'return' ;
+If: 'if' ;
+Else: 'else' ;
+While: 'while';
 
 Semi: ';';
 Colon: ':';

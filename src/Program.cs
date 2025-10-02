@@ -22,6 +22,9 @@ public static class Program
                          package main;
                          var a = 1;
                          fun main(x: int) -> int {
+                            while(x==1){
+                                var t = 1;
+                            }
                              return x + a;
                          }
                          """;
