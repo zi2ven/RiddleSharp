@@ -21,7 +21,12 @@ public static class Program
                          package main;
                          class Foo{
                             var a: int;
+                            class ttt{
+                                var b: Foo;
+                            }
+                            var c: ttt;
                          }
+                         var a = Foo::ttt;
                          """;
 
         var astLower = new CstLower();
@@ -32,14 +37,11 @@ public static class Program
 
         var x = SymbolPass.Run([u1]);
 
-        var tp = TypeInfer.Run(x);
+        // var tp = TypeInfer.Run(x);
 
-        foreach (var i in tp)
-        {
-            Console.WriteLine(i);
-        }
+        Console.WriteLine(x[0]);
 
-        LlvmPass.Run(tp);
+        // LlvmPass.Run(tp);
         // LgPass.Run(tp);
     }
 }

@@ -132,7 +132,7 @@ public record ClassDecl(string Name, Stmt[] Stmts): Decl(Name)
     public Type? Type { get; set; }
     public Dictionary<string, FuncDecl> Methods { get; init; } = new();
     public Dictionary<string, VarDecl> Members { get; init; } = new();
-    
+    public Dictionary<string, ClassDecl> Nested { get; init; } = new();
     public override T Accept<T>(AstVisitor<T> visitor)
     {
         return visitor.VisitClassDecl(this);
@@ -143,7 +143,8 @@ public record ClassDecl(string Name, Stmt[] Stmts): Decl(Name)
         var stmts = string.Join(", ", Stmts.Select(s => s.ToString()));
         var methods = string.Join(", ", Methods.Values.Select(m => m.ToString()));
         var members = string.Join(", ", Members.Values.Select(v => v.ToString()));
-        return $"ClassDecl {{ Name = {Name}, Stmts = [{stmts}], Methods = [{methods}], Members = [{members}] }}";
+        var nested = string.Join(", ", Nested.Values.Select(n => n.ToString()));
+        return $"ClassDecl {{ Name = {Name}, Stmts = [{stmts}], Methods = [{methods}], Members = [{members}], Nested = [{nested}] }}";
     }
 }
 

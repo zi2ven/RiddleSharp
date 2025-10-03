@@ -226,21 +226,21 @@ public static class SymbolPass
                 {
                     case VarDecl field:
                         field.IsGlobal = false;
-                        
+
                         field.QualifiedName = classQn.Add(field.Name);
-                        
+
                         _table.AddDecl(field);
-                        
+
                         node.Members[field.Name] = field;
                         _unit.Decls.Value[field.QualifiedName] = field;
-                        
+
                         VisitOrNull(field.TypeLit);
                         VisitOrNull(field.Value);
                         break;
 
                     case FuncDecl method:
                         method.QualifiedName = classQn.Add(method.Name);
-                        
+
                         _table.AddDecl(method);
 
                         node.Methods[method.Name] = method;
@@ -250,6 +250,7 @@ public static class SymbolPass
                     case ClassDecl nested:
                         nested.QualifiedName = classQn.Add(nested.Name);
                         _table.AddDecl(nested);
+                        node.Nested[nested.Name] = nested;
                         _unit.Decls.Value[nested.QualifiedName] = nested;
                         break;
 
@@ -258,20 +259,20 @@ public static class SymbolPass
                         break;
                 }
             }
-            
+
             foreach (var method in node.Methods.Values)
             {
                 VisitOrNull(method.TypeLit);
-                
+
                 _table.Push();
                 _funcStack.Push(method);
-                
+
                 foreach (var p in method.Args)
                 {
                     VisitOrNull(p.TypeLit);
                     _table.AddDecl(p);
                 }
-                
+
                 if (method.Body is not null)
                 {
                     foreach (var st in method.Body)
@@ -331,34 +332,67 @@ public static class SymbolPass
         private Decl ResolveQualified(QualifiedName qn)
         {
             var parts = qn.Parts;
+            if (parts.Count == 0) throw new Exception("empty qualified name");
 
+            // 以当前作用域/本包顶层声明为起点
+            if (_table.TryGetDecl(parts[0], out var firstLocal))
+            {
+                return WalkMembers(firstLocal, startIndex: 1);
+            }
+
+            // 本包顶层声明_unit.Decls 避免作用域里没但包里有的情况
+            if (_unit.Decls.Value.TryGetValue(_unit.PackageName.Add(parts[0]), out var firstTop))
+            {
+                return WalkMembers(firstTop, startIndex: 1);
+            }
+
+            // 包前缀 + 导出
             QualifiedName? best = null;
             foreach (var pkg in Candidates())
             {
                 if (pkg.Parts.Count >= parts.Count) continue;
                 var match = !pkg.Parts.Where((t, i) => !Equals(t, parts[i])).Any();
-
                 if (match && (best is null || pkg.Parts.Count > best.Parts.Count))
                     best = pkg;
             }
 
             if (best is null)
-                throw new Exception($"'{qn}' not found: no matching imported package prefix");
+                throw new Exception($"'{qn}' not found: no matching imported package prefix or local top-level symbol");
 
             if (!_exportsByPkg.TryGetValue(best, out var exports))
                 throw new Exception($"Package '{best}' does not exist or has no exports");
 
-            var remaining = parts.Count - best.Parts.Count;
-            if (remaining == 1)
+            var offset = best.Parts.Count;
+            var first = parts[offset];
+            if (!exports.TryGetValue(first, out var current))
+                throw new Exception($"'{best}::{first}' is not exported");
+
+            return WalkMembers(current, startIndex: offset + 1);
+
+            // === helpers ===
+            Decl WalkMembers(Decl current, int startIndex)
             {
-                var member = parts[^1];
-                return !exports.TryGetValue(member, out var d)
-                    ? throw new Exception($"'{best}::{member}' is not exported")
-                    : d;
+                for (int i = startIndex; i < parts.Count; i++)
+                {
+                    var member = parts[i];
+                    current = ResolveMember(current, member);
+                }
+
+                return current;
             }
 
-            // todo Members within symbols
-            throw new NotImplementedException($"Multi-level member access not supported yet: '{qn}'");
+            Decl ResolveMember(Decl container, string member)
+            {
+                if (container is ClassDecl cls)
+                {
+                    if (cls.Members.TryGetValue(member, out var v)) return v;
+                    if (cls.Methods.TryGetValue(member, out var m)) return m;
+                    if (cls.Nested.TryGetValue(member, out var c)) return c;
+                    throw new Exception($"'{cls.QualifiedName}::{member}' does not exist");
+                }
+
+                throw new Exception($"'{container.QualifiedName}' has no members; cannot access '{member}'.");
+            }
 
             IEnumerable<QualifiedName> Candidates()
             {
