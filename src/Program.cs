@@ -1,5 +1,4 @@
-﻿using RiddleSharp.Background.Lg;
-using RiddleSharp.Background.Llvm;
+﻿using RiddleSharp.Background.Llvm;
 using RiddleSharp.Frontend;
 using RiddleSharp.Semantics;
 
@@ -20,12 +19,8 @@ public static class Program
         
         const string a = """
                          package main;
-                         var a = 1;
-                         fun main(x: int) -> int {
-                            while(x==1){
-                                var t = 1;
-                            }
-                             return x + a;
+                         class Foo{
+                            var a: int;
                          }
                          """;
 

@@ -32,9 +32,12 @@ public abstract class AstVisitor<T>
             Visit(i);
         }
 
-        foreach (var i in node.Body)
+        if (node.Body is not null)
         {
-            Visit(i);
+            foreach (var i in node.Body)
+            {
+                Visit(i);
+            }
         }
 
         return default!;
@@ -105,6 +108,20 @@ public abstract class AstVisitor<T>
     {
         Visit(node.Condition);
         Visit(node.Body);
+        return default!;
+    }
+
+    public virtual T VisitBoolean(Boolean node)
+    {
+        return default!;
+    }
+
+    public virtual T VisitClassDecl(ClassDecl node)
+    {
+        foreach (var i in node.Stmts)
+        {
+            Visit(i);
+        }
         return default!;
     }
 }

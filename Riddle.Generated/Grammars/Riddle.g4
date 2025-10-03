@@ -12,6 +12,7 @@ statememt
     | returnStmt
     | ifStmt
     | whileStmt
+    | classDecl
     ;
 
 packageStmt
@@ -30,8 +31,13 @@ funcParam
     : name=Identifier Colon type=expression
     ;    
 
+funcParamList
+    : vararg=ELLIPSIS
+    | params+=funcParam (Comma params+=funcParam)* (Comma vararg=ELLIPSIS)?
+    ;
+
 funcDecl
-    : Fun name=Identifier LParen (funcParam (Comma funcParam)*)? RParen (Arrow type=expression)? ((body=block)|Semi)
+    : Fun name=Identifier LParen funcParamList? RParen (Arrow type=expression)? ((body=block)|Semi)
     ;
     
 ifStmt
@@ -50,14 +56,21 @@ returnStmt
     : Return (result=expression)? Semi
     ;
 
+classDecl
+    : Class name=Identifier body=block
+    ;
+
 exprStmt
     : expression Semi
     ;
     
 expression
     : callee=expression LParen (args+=expression (Comma args+=expression)*)? RParen #call
+    | expression QMark #nullPointer //todo
+    | expression Star #pointer      //todo
     | left=expression op right=expression #binaryOp
     | IntLit #integer
+    | BoolLit #boolean
     | qName #symbol
     ;
     
@@ -78,6 +91,7 @@ Return: 'return' ;
 If: 'if' ;
 Else: 'else' ;
 While: 'while';
+Class: 'class';
 
 Semi: ';';
 Colon: ':';
@@ -88,7 +102,12 @@ RParen : ')' ;
 LBrace : '{' ;
 RBrace : '}' ;
 Arrow: '->';
+Star: '*';
+Dot : '.';
+QMark: '?';
+ELLIPSIS: Dot Dot Dot;
 
+BoolLit: 'true' | 'false';
 IntLit: [1-9][0-9]* | '0';
 Identifier: [a-zA-Z_][a-zA-Z0-9_]*;
 

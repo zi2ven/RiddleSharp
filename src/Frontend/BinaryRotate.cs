@@ -47,7 +47,8 @@ public static class BinaryRotate
             fd.Name,
             fd.TypeLit is null ? null : RewriteExpr(fd.TypeLit),
             fd.Args.Select(a => new FuncParam(a.Name, RewriteExpr(a.TypeLit!))).ToArray(),
-            fd.Body.Select(RewriteStmt).ToArray()
+            fd.IsVarArg,
+            fd.Body?.Select(RewriteStmt).ToArray()
         ),
 
         If @if => new If(

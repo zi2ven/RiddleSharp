@@ -205,10 +205,84 @@ public static class SymbolPass
                 _table.AddDecl(i);
             }
 
-            foreach (var i in node.Body) VisitOrNull(i);
+            if (node.Body is not null)
+            {
+                foreach (var i in node.Body) VisitOrNull(i);
+            }
+
             _table.Pop();
             _funcStack.Pop();
 
+            return null;
+        }
+
+        public override object? VisitClassDecl(ClassDecl node)
+        {
+            _table.Push();
+            var classQn = node.QualifiedName ?? _unit.PackageName.Add(node.Name);
+            foreach (var s in node.Stmts)
+            {
+                switch (s)
+                {
+                    case VarDecl field:
+                        field.IsGlobal = false;
+                        
+                        field.QualifiedName = classQn.Add(field.Name);
+                        
+                        _table.AddDecl(field);
+                        
+                        node.Members[field.Name] = field;
+                        _unit.Decls.Value[field.QualifiedName] = field;
+                        
+                        VisitOrNull(field.TypeLit);
+                        VisitOrNull(field.Value);
+                        break;
+
+                    case FuncDecl method:
+                        method.QualifiedName = classQn.Add(method.Name);
+                        
+                        _table.AddDecl(method);
+
+                        node.Methods[method.Name] = method;
+                        _unit.Decls.Value[method.QualifiedName] = method;
+                        break;
+
+                    case ClassDecl nested:
+                        nested.QualifiedName = classQn.Add(nested.Name);
+                        _table.AddDecl(nested);
+                        _unit.Decls.Value[nested.QualifiedName] = nested;
+                        break;
+
+                    default:
+                        VisitOrNull(s);
+                        break;
+                }
+            }
+            
+            foreach (var method in node.Methods.Values)
+            {
+                VisitOrNull(method.TypeLit);
+                
+                _table.Push();
+                _funcStack.Push(method);
+                
+                foreach (var p in method.Args)
+                {
+                    VisitOrNull(p.TypeLit);
+                    _table.AddDecl(p);
+                }
+                
+                if (method.Body is not null)
+                {
+                    foreach (var st in method.Body)
+                        VisitOrNull(st);
+                }
+
+                _funcStack.Pop();
+                _table.Pop();
+            }
+
+            _table.Pop();
             return null;
         }
 

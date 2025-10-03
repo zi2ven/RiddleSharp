@@ -108,10 +108,10 @@ public record FuncParam(string Name, Expr TypeLit) : VarDecl(Name, TypeLit, null
     }
 }
 
-public record FuncDecl(string Name, Expr? TypeLit, FuncParam[] Args, Stmt[] Body) : Decl(Name)
+public record FuncDecl(string Name, Expr? TypeLit, FuncParam[] Args, bool IsVarArg , Stmt[]? Body) : Decl(Name)
 {
-    public Ty? Type { get; set; }
-    public List<VarDecl> Alloc { get; set; } = [];
+    public Ty.FuncTy? Type { get; set; }
+    public List<VarDecl> Alloc { get; } = [];
 
     public override T Accept<T>(AstVisitor<T> visitor)
     {
@@ -121,9 +121,29 @@ public record FuncDecl(string Name, Expr? TypeLit, FuncParam[] Args, Stmt[] Body
     public override string ToString()
     {
         var args = string.Join(", ", Args.Select(s => s.ToString()));
-        var body = string.Join(", ", Body.Select(s => s.ToString()));
+        var body = string.Join(", ", Body is null ? "" : Body.Select(s => s.ToString()));
         return
             $"FuncDecl {{ Name = {Name}, QualifiedName = {QualifiedName}, TypeLit = {TypeLit}, Args = [{args}], Body = [{body}] }} }}";
+    }
+}
+
+public record ClassDecl(string Name, Stmt[] Stmts): Decl(Name)
+{
+    public Type? Type { get; set; }
+    public Dictionary<string, FuncDecl> Methods { get; init; } = new();
+    public Dictionary<string, VarDecl> Members { get; init; } = new();
+    
+    public override T Accept<T>(AstVisitor<T> visitor)
+    {
+        return visitor.VisitClassDecl(this);
+    }
+
+    public override string ToString()
+    {
+        var stmts = string.Join(", ", Stmts.Select(s => s.ToString()));
+        var methods = string.Join(", ", Methods.Values.Select(m => m.ToString()));
+        var members = string.Join(", ", Members.Values.Select(v => v.ToString()));
+        return $"ClassDecl {{ Name = {Name}, Stmts = [{stmts}], Methods = [{methods}], Members = [{members}] }}";
     }
 }
 
@@ -132,7 +152,7 @@ public record BuiltinTypeDecl(string Name) : Decl(Name)
 {
     public override T Accept<T>(AstVisitor<T> visitor)
     {
-        throw new NotImplementedException();
+        throw new NotImplementedException("only in Symbol Pass");
     }
 }
 
@@ -186,7 +206,7 @@ public record Integer : Expr
     public Integer(int Value)
     {
         this.Value = Value;
-        Type = Ty.IntTy.Instance;
+        Type = Ty.IntTy.Int32;
     }
 
     public override T Accept<T>(AstVisitor<T> visitor)
@@ -195,6 +215,22 @@ public record Integer : Expr
     }
 
     public int Value { get; }
+}
+
+public record Boolean : Expr
+{
+    public Boolean(bool Value)
+    {
+        this.Value = Value;
+        Type = Ty.IntTy.Boolean;
+    }
+
+    public override T Accept<T>(AstVisitor<T> visitor)
+    {
+        return visitor.VisitBoolean(this);
+    }
+
+    public bool Value { get; }
 }
 
 public record Symbol(QualifiedName Name) : Expr

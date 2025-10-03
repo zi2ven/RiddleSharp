@@ -45,8 +45,8 @@ public class AstTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(varDecl.Type, Is.EqualTo(Ty.IntTy.Instance));
-            Assert.That(funcDecl.Type, Is.EqualTo(new Ty.FuncTy(new List<Ty> { Ty.IntTy.Instance }, Ty.IntTy.Instance)));
+            Assert.That(varDecl.Type, Is.EqualTo(Ty.IntTy.Int32));
+            Assert.That(funcDecl.Type, Is.EqualTo(new Ty.FuncTy(new List<Ty> { Ty.IntTy.Int32 }, Ty.IntTy.Int32, false)));
         });
     }
 }

@@ -1,13 +1,11 @@
-﻿using System.Reflection;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using RiddleSharp.Frontend;
 using RiddleSharp.Semantics;
 using Ubiquity.NET.Llvm;
 using Ubiquity.NET.Llvm.Instructions;
-using Ubiquity.NET.Llvm.Interop;
-using Ubiquity.NET.Llvm.Interop.ABI.llvm_c;
 using Ubiquity.NET.Llvm.Types;
 using Ubiquity.NET.Llvm.Values;
+using Boolean = RiddleSharp.Frontend.Boolean;
 using Module = Ubiquity.NET.Llvm.Module;
 
 namespace RiddleSharp.Background.Llvm;
@@ -25,29 +23,19 @@ public static class LlvmPass
             var v = new LlvmVisitor(context, module, vars, functions);
             v.Visit(unit);
         }
+        
+        foreach (var fn in module.Functions)
+        {
+            if (fn.IsDeclaration) continue; // 只对有函数体的跑
+
+            var e = fn.TryRunPasses("mem2reg", "instcombine", "reassociate", "gvn", "simplifycfg");
+            if (e.Failed)
+            {
+                throw new Exception(e.ToString());
+            }
+        }
 
         Console.WriteLine(module.WriteToString());
-    }
-
-    private static object? GetHiddenHandle(object inst)
-    {
-        var t = inst.GetType();
-
-
-        var p = t.GetProperty("Handle", BindingFlags.NonPublic | BindingFlags.Instance);
-        if (p != null) return p.GetValue(inst);
-
-        foreach (var f in t.GetFields(BindingFlags.NonPublic | BindingFlags.Instance))
-            if (f.Name.Contains("Handle", StringComparison.OrdinalIgnoreCase) ||
-                f.FieldType.Name.Contains("ValueRef", StringComparison.OrdinalIgnoreCase) ||
-                f.FieldType == typeof(IntPtr))
-                return f.GetValue(inst);
-
-        return (from gp in t.GetProperties(BindingFlags.NonPublic | BindingFlags.Instance)
-            where gp.Name.Contains("Handle", StringComparison.OrdinalIgnoreCase) ||
-                  gp.PropertyType.Name.Contains("ValueRef", StringComparison.OrdinalIgnoreCase) ||
-                  gp.PropertyType == typeof(IntPtr)
-            select gp.GetValue(inst)).FirstOrDefault();
     }
 
     private class LlvmVisitor(
@@ -61,29 +49,28 @@ public static class LlvmPass
 
         private readonly Dictionary<(Ty, Ty, string), Func<Value, Value, InstructionBuilder, Value>> _operators = new()
         {
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "+")] = (x, y, builder) => builder.Add(x, y),
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "-")] = (x, y, builder) => builder.Sub(x, y),
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "*")] = (x, y, builder) => builder.Mul(x, y),
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "/")] = (x, y, builder) => builder.SDiv(x, y),
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "%")] = (x, y, builder) => builder.SRem(x, y),
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "=")] =
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "+")] = (x, y, builder) => builder.Add(x, y),
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "-")] = (x, y, builder) => builder.Sub(x, y),
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "*")] = (x, y, builder) => builder.Mul(x, y),
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "/")] = (x, y, builder) => builder.SDiv(x, y),
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "%")] = (x, y, builder) => builder.SRem(x, y),
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "=")] =
                 (x, y, builder) =>
                 {
                     var l = (x as Load)!;
-                    Core.LLVMInstructionEraseFromParent((LLVMValueRef)GetHiddenHandle(l)!);
                     return builder.Store(y, l.Operands[0]!);
                 },
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "==")] =
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "==")] =
                 (x, y, builder) => builder.Compare(IntPredicate.Equal, x, y),
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "!=")] =
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "!=")] =
                 (x, y, builder) => builder.Compare(IntPredicate.NotEqual, x, y),
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "<")] =
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "<")] =
                 (x, y, builder) => builder.Compare(IntPredicate.SignedLessThan, x, y),
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "<=")] = (x, y, builder) =>
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "<=")] = (x, y, builder) =>
                 builder.Compare(IntPredicate.SignedLessThanOrEqual, x, y),
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, ">")] =
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, ">")] =
                 (x, y, builder) => builder.Compare(IntPredicate.SignedGreaterThan, x, y),
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, ">=")] = (x, y, builder) =>
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, ">=")] = (x, y, builder) =>
                 builder.Compare(IntPredicate.SignedGreaterThanOrEqual, x, y),
         };
 
@@ -116,7 +103,9 @@ public static class LlvmPass
                     return context.Int32Type;
                 case Ty.FuncTy funcTy:
                     var pty = funcTy.Args.Select(ParseType);
-                    return context.GetFunctionType(ParseType(funcTy.Ret), pty);
+                    return context.GetFunctionType(funcTy.IsVarArg,ParseType(funcTy.Ret), pty);
+                case Ty.VoidTy:
+                    return context.VoidType;
                 default:
                     throw new NotSupportedException($"Ty {ty} is not supported");
             }
@@ -134,25 +123,36 @@ public static class LlvmPass
             var fty = (IFunctionType)ParseType(node.Type!);
             var func = module.CreateFunction(name, fty);
             functions.Add(node, func);
-            var entry = func.AppendBasicBlock("entry");
-            _builder.PositionAtEnd(entry);
 
-
-            for (var i = 0; i < node.Args.Length; i++)
+            if (node.Body is not null)
             {
-                var alloca = func.Parameters[i];
-                vars.Add(node.Args[i], alloca);
-            }
+                var entry = func.AppendBasicBlock("entry");
+                _builder.PositionAtEnd(entry);
 
-            foreach (var a in node.Alloc)
-            {
-                var alloca = _builder.Alloca(ParseType(a.Type!));
-                vars.Add(a, alloca);
-            }
 
-            foreach (var i in node.Body)
-            {
-                Visit(i);
+                for (var i = 0; i < node.Args.Length; i++)
+                {
+                    var alloca = func.Parameters[i];
+                    vars.Add(node.Args[i], alloca);
+                }
+
+                foreach (var a in node.Alloc)
+                {
+                    var alloca = _builder.Alloca(ParseType(a.Type!));
+                    vars.Add(a, alloca);
+                }
+
+
+                foreach (var i in node.Body)
+                {
+                    Visit(i);
+                }
+
+                // 合法化处理
+                if (func.BasicBlocks.ElementAt(func.BasicBlocks.Count - 1).Terminator == null)
+                {
+                    throw new Exception("At the end of the function, a return is required");
+                }
             }
 
             return null!;
@@ -207,10 +207,9 @@ public static class LlvmPass
             };
         }
 
-        public override Value VisitInteger(Integer node)
-        {
-            return context.CreateConstant(node.Value);
-        }
+        public override Value VisitInteger(Integer node) => context.CreateConstant(node.Value);
+
+        public override Value VisitBoolean(Boolean node) => context.CreateConstant(node.Value);
 
         public override Value VisitBinaryOp(BinaryOp node)
         {
@@ -235,31 +234,49 @@ public static class LlvmPass
 
         public override Value VisitIf(If node)
         {
-            var nowFunc = _builder.InsertFunction!;
+            var f = _builder.InsertFunction!;
             var cond = Visit(node.Condition);
-            var thenBb = nowFunc.AppendBasicBlock("");
-            BasicBlock? elseBb = null;
-            var exitBb = nowFunc.AppendBasicBlock("");
 
-            if (node.Else is not null)
-            {
-                elseBb = nowFunc.AppendBasicBlock("");
-            }
+            var thenBb = f.AppendBasicBlock("");
+            var elseBb = node.Else != null ? f.AppendBasicBlock("") : null;
 
-            _builder.Branch(cond, thenBb, elseBb ?? exitBb);
+            // 条件跳转：不需要预先知道 merge 块
+            _builder.Branch(cond, thenBb, elseBb ?? f.AppendBasicBlock(""));
 
+            // then
             _builder.PositionAtEnd(thenBb);
             Visit(node.Then);
-            _builder.Branch(exitBb);
+            var thenTerminated = _builder.InsertBlock?.Terminator != null;
 
-            if (node.Else is not null)
+            // else
+            var elseTerminated = true;
+            if (elseBb != null)
             {
-                _builder.PositionAtEnd(elseBb!);
-                Visit(node.Else);
-                _builder.Branch(exitBb);
+                _builder.PositionAtEnd(elseBb);
+                Visit(node.Else!);
+                elseTerminated = _builder.InsertBlock?.Terminator != null;
             }
 
-            _builder.PositionAtEnd(exitBb);
+            // 只有当至少一边没终结时，才需要合流块
+            if (!thenTerminated || !elseTerminated)
+            {
+                var mergeBb = f.AppendBasicBlock("if.end");
+
+                if (!thenTerminated)
+                {
+                    _builder.PositionAtEnd(thenBb);
+                    _builder.Branch(mergeBb);
+                }
+
+                if (elseBb != null && !elseTerminated)
+                {
+                    _builder.PositionAtEnd(elseBb);
+                    _builder.Branch(mergeBb);
+                }
+
+                _builder.PositionAtEnd(mergeBb);
+            }
+
             return null!;
         }
 
@@ -270,15 +287,18 @@ public static class LlvmPass
             var loopBb = nowFunc.AppendBasicBlock("");
             var exitBb = nowFunc.AppendBasicBlock("");
             _builder.Branch(condBb);
-            
+
             _builder.PositionAtEnd(condBb);
             var cond = Visit(node.Condition);
             _builder.Branch(cond, loopBb, exitBb);
-            
+
             _builder.PositionAtEnd(loopBb);
             Visit(node.Body);
-            _builder.Branch(exitBb);
-            
+            if (_builder.InsertBlock?.Terminator == null)
+            {
+                _builder.Branch(condBb);
+            }
+
             _builder.PositionAtEnd(exitBb);
             return null!;
         }

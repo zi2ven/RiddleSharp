@@ -19,25 +19,28 @@ public static class TypeInfer
     {
         private readonly Dictionary<(Ty, Ty, string), Ty> _opType = new()
         {
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "+")] = Ty.IntTy.Instance,
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "-")] = Ty.IntTy.Instance,
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "*")] = Ty.IntTy.Instance,
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "/")] = Ty.IntTy.Instance,
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "%")] = Ty.IntTy.Instance,
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "=")] = Ty.IntTy.Instance,
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "==")] = Ty.BoolTy.Instance,
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "!=")] = Ty.BoolTy.Instance,
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "<")] = Ty.BoolTy.Instance,
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, "<=")] = Ty.BoolTy.Instance,
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, ">")] = Ty.BoolTy.Instance,
-            [(Ty.IntTy.Instance, Ty.IntTy.Instance, ">=")] = Ty.BoolTy.Instance,
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "+")] = Ty.IntTy.Int32,
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "-")] = Ty.IntTy.Int32,
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "*")] = Ty.IntTy.Int32,
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "/")] = Ty.IntTy.Int32,
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "%")] = Ty.IntTy.Int32,
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "=")] = Ty.IntTy.Int32,
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "==")] = Ty.IntTy.Boolean,
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "!=")] = Ty.IntTy.Boolean,
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "<")] = Ty.IntTy.Boolean,
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, "<=")] = Ty.IntTy.Boolean,
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, ">")] = Ty.IntTy.Boolean,
+            [(Ty.IntTy.Int32, Ty.IntTy.Int32, ">=")] = Ty.IntTy.Boolean,
         };
+
+
+        private readonly Stack<FuncDecl> _funcStack = new();
 
         private static bool CheckType(Ty x, Ty y)
         {
             return x switch
             {
-                Ty.IntTy or Ty.BoolTy or Ty.VoidTy => x == y,
+                Ty.IntTy or Ty.VoidTy => x == y,
                 _ => throw new NotSupportedException($"Type {x} is not supported")
             };
         }
@@ -104,11 +107,17 @@ public static class TypeInfer
                 paramTypes.Add(i.TypeLit!.Type ?? throw new InvalidOperationException());
             }
 
-            node.Type = new Ty.FuncTy(paramTypes, returnType);
+            node.Type = new Ty.FuncTy(paramTypes, returnType, node.IsVarArg);
 
-            foreach (var i in node.Body)
+            if (node.Body is not null)
             {
-                Visit(i);
+                _funcStack.Push(node);
+                foreach (var i in node.Body)
+                {
+                    Visit(i);
+                }
+
+                _funcStack.Pop();
             }
 
             return null;
@@ -126,12 +135,12 @@ public static class TypeInfer
                 BuiltinTypeDecl b => b.Name switch
                 {
                     "void" => new Ty.VoidTy(),
-                    "bool" => Ty.BoolTy.Instance,
-                    "int" => Ty.IntTy.Instance,
+                    "bool" => Ty.IntTy.Boolean,
+                    "int" => Ty.IntTy.Int32,
                     _ => throw new NotImplementedException($"Builtin type \'{b.Name}\' not implemented")
                 },
                 VarDecl v => v.Type,
-                FuncDecl f => (f.Type as Ty.FuncTy)!.Ret,
+                FuncDecl f => f.Type!.Ret,
                 _ => throw new NotImplementedException()
             };
 
@@ -154,7 +163,7 @@ public static class TypeInfer
                         throw new Exception("Call Function Decl not implemented");
                     }
 
-                    node.Type = (f.Type as Ty.FuncTy)!.Ret;
+                    node.Type = f.Type!.Ret;
 
                     break;
                 default:
@@ -172,7 +181,7 @@ public static class TypeInfer
         public override object? VisitIf(If node)
         {
             Visit(node.Condition);
-            if (node.Condition.Type is not Ty.BoolTy)
+            if (node.Condition.Type is not Ty.IntTy { Width: 1 })
             {
                 throw new Exception("If condition must be boolean");
             }
@@ -189,12 +198,31 @@ public static class TypeInfer
         public override object? VisitWhile(While node)
         {
             Visit(node.Condition);
-            if (node.Condition.Type is not Ty.BoolTy)
+            if (node.Condition.Type is not Ty.IntTy { Width: 1 })
             {
                 throw new Exception("While condition must be boolean");
             }
 
             Visit(node.Body);
+            return null;
+        }
+
+        public override object? VisitReturn(Return node)
+        {
+            var func = _funcStack.Peek();
+            Ty t = new Ty.VoidTy();
+            if (node.Expr is not null)
+            {
+                Visit(node.Expr);
+                t = node.Expr.Type!;
+            }
+
+            if (!CheckType(func.Type!.Ret, t))
+            {
+                throw new Exception(
+                    $"The return type {t} of the value is different from the return type {func.Type.Ret} of the function");
+            }
+
             return null;
         }
     }

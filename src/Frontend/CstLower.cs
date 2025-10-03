@@ -105,6 +105,9 @@ public class CstLower : RiddleBaseVisitor<AstNode>
     public override AstNode VisitInteger(RiddleParser.IntegerContext context) =>
         new Integer(int.Parse(context.GetText()));
 
+    public override AstNode VisitBoolean(RiddleParser.BooleanContext context) =>
+        new Boolean(context.GetText() == "true");
+
     public override AstNode VisitSymbol(RiddleParser.SymbolContext context)
     {
         return new Symbol(QualifiedName.Parse(context.GetText()));
@@ -132,10 +135,18 @@ public class CstLower : RiddleBaseVisitor<AstNode>
     public override AstNode VisitFuncDecl(RiddleParser.FuncDeclContext context)
     {
         var name = context.name.Text;
-        var @params = context.funcParam().Select(LowerOrThrow<FuncParam>).ToList();
+        var @params = context.funcParamList()._params.Select(LowerOrThrow<FuncParam>).ToList();
         var returnType = LowerOrNull<Expr>(context.type);
+        var body = LowerOrNull<Block>(context.body);
+        return new FuncDecl(name, returnType, @params.ToArray(), context.funcParamList().vararg is not null,
+            body?.Body);
+    }
+
+    public override AstNode VisitClassDecl(RiddleParser.ClassDeclContext context)
+    {
+        var name = context.name.Text;
         var body = LowerOrThrow<Block>(context.body);
-        return new FuncDecl(name, returnType, @params.ToArray(), body.Body);
+        return new ClassDecl(name, body.Body);
     }
 
     public override AstNode VisitBlock(RiddleParser.BlockContext context)
