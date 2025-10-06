@@ -135,10 +135,10 @@ public class CstLower : RiddleBaseVisitor<AstNode>
     public override AstNode VisitFuncDecl(RiddleParser.FuncDeclContext context)
     {
         var name = context.name.Text;
-        var @params = context.funcParamList()._params.Select(LowerOrThrow<FuncParam>).ToList();
+        var @params = context.funcParamList()?._params.Select(LowerOrThrow<FuncParam>).ToList() ?? [];
         var returnType = LowerOrNull<Expr>(context.type);
         var body = LowerOrNull<Block>(context.body);
-        return new FuncDecl(name, returnType, @params.ToArray(), context.funcParamList().vararg is not null,
+        return new FuncDecl(name, returnType, @params.ToArray(), context.funcParamList()?.vararg is not null,
             body?.Body);
     }
 

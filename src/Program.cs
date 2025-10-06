@@ -1,6 +1,9 @@
-﻿using RiddleSharp.Background.Llvm;
+﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
+using RiddleSharp.Background.Llvm;
 using RiddleSharp.Frontend;
 using RiddleSharp.Semantics;
+using Ubiquity.NET.Llvm;
 
 namespace RiddleSharp;
 
@@ -12,21 +15,23 @@ public static class Program
     }
     public static void Main(string[] args)
     {
-        
         // var settings = ArgParser.Parse(args);
 
         // var files = ReadFiles(settings.Files);
-        
+
         const string a = """
                          package main;
-                         class Foo{
-                            var a: int;
-                            class ttt{
-                                var b: Foo;
+                         fun fib(x:int)->int{
+                            if(x<2){
+                                return x;
                             }
-                            var c: ttt;
+                            else
+                            return fib(x-1)+fib(x-2);
                          }
-                         var a = Foo::ttt;
+                         fun main(){
+                            var a = fib(35);
+                            return;
+                         }
                          """;
 
         var astLower = new CstLower();
@@ -37,11 +42,11 @@ public static class Program
 
         var x = SymbolPass.Run([u1]);
 
-        // var tp = TypeInfer.Run(x);
+        var tp = TypeInfer.Run(x);
 
         Console.WriteLine(x[0]);
 
-        // LlvmPass.Run(tp);
+        LlvmPass.Run(tp);
         // LgPass.Run(tp);
     }
 }

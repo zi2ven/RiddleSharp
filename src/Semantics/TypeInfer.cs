@@ -96,7 +96,7 @@ public static class TypeInfer
             }
             else
             {
-                returnType = new Ty.VoidTy();
+                returnType = Ty.VoidTy.Instance;
             }
 
             List<Ty> paramTypes = [];
@@ -134,7 +134,7 @@ public static class TypeInfer
             {
                 BuiltinTypeDecl b => b.Name switch
                 {
-                    "void" => new Ty.VoidTy(),
+                    "void" => Ty.VoidTy.Instance,
                     "bool" => Ty.IntTy.Boolean,
                     "int" => Ty.IntTy.Int32,
                     _ => throw new NotImplementedException($"Builtin type \'{b.Name}\' not implemented")
@@ -210,7 +210,7 @@ public static class TypeInfer
         public override object? VisitReturn(Return node)
         {
             var func = _funcStack.Peek();
-            Ty t = new Ty.VoidTy();
+            Ty t = Ty.VoidTy.Instance;
             if (node.Expr is not null)
             {
                 Visit(node.Expr);

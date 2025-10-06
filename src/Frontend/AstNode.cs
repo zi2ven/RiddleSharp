@@ -129,7 +129,7 @@ public record FuncDecl(string Name, Expr? TypeLit, FuncParam[] Args, bool IsVarA
 
 public record ClassDecl(string Name, Stmt[] Stmts): Decl(Name)
 {
-    public Type? Type { get; set; }
+    public Ty.ClassTy? Type { get; set; }
     public Dictionary<string, FuncDecl> Methods { get; init; } = new();
     public Dictionary<string, VarDecl> Members { get; init; } = new();
     public Dictionary<string, ClassDecl> Nested { get; init; } = new();

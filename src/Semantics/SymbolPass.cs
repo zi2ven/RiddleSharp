@@ -220,6 +220,8 @@ public static class SymbolPass
         {
             _table.Push();
             var classQn = node.QualifiedName ?? _unit.PackageName.Add(node.Name);
+            
+            node.Type ??= new Ty.ClassTy(classQn);
             foreach (var s in node.Stmts)
             {
                 switch (s)
@@ -252,6 +254,7 @@ public static class SymbolPass
                         _table.AddDecl(nested);
                         node.Nested[nested.Name] = nested;
                         _unit.Decls.Value[nested.QualifiedName] = nested;
+                        nested.Type ??= new Ty.ClassTy(nested.QualifiedName);
                         break;
 
                     default:
@@ -370,15 +373,15 @@ public static class SymbolPass
             return WalkMembers(current, startIndex: offset + 1);
 
             // === helpers ===
-            Decl WalkMembers(Decl current, int startIndex)
+            Decl WalkMembers(Decl cur, int startIndex)
             {
-                for (int i = startIndex; i < parts.Count; i++)
+                for (var i = startIndex; i < parts.Count; i++)
                 {
                     var member = parts[i];
-                    current = ResolveMember(current, member);
+                    cur = ResolveMember(cur, member);
                 }
 
-                return current;
+                return cur;
             }
 
             Decl ResolveMember(Decl container, string member)

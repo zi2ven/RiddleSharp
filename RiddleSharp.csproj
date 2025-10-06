@@ -41,4 +41,11 @@
       <PackageReference Include="Ubiquity.NET.Llvm" Version="20.1.8-delta" />
     </ItemGroup>
 
+    <PropertyGroup>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <PlatformTarget>x64</PlatformTarget>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+        <PublishTrimmed>false</PublishTrimmed>
+    </PropertyGroup>
+
 </Project>

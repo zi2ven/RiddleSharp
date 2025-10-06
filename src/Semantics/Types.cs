@@ -1,4 +1,6 @@
-﻿namespace RiddleSharp.Semantics;
+﻿using RiddleSharp.Frontend;
+
+namespace RiddleSharp.Semantics;
 
 public abstract record Ty
 {
@@ -28,7 +30,14 @@ public abstract record Ty
         public bool Signed { get; }
     }
 
-    public sealed record VoidTy : Ty;
+    public sealed record VoidTy : Ty
+    {
+        private VoidTy()
+        {
+        }
+
+        public static VoidTy Instance { get; } = new();
+    }
 
     public sealed record FuncTy(IReadOnlyList<Ty> Args, Ty Ret, bool IsVarArg) : Ty
     {
@@ -47,5 +56,10 @@ public abstract record Ty
             hc.Add(IsVarArg);
             return hc.ToHashCode();
         }
+    }
+    
+    public sealed record ClassTy(QualifiedName Name) : Ty
+    {
+        public override string ToString() => $"class {Name}";
     }
 }

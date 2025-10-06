@@ -23,7 +23,7 @@ public static class LlvmPass
             var v = new LlvmVisitor(context, module, vars, functions);
             v.Visit(unit);
         }
-        
+
         foreach (var fn in module.Functions)
         {
             if (fn.IsDeclaration) continue; // 只对有函数体的跑
@@ -36,6 +36,8 @@ public static class LlvmPass
         }
 
         Console.WriteLine(module.WriteToString());
+
+        module.WriteToFile("a.bc");
     }
 
     private class LlvmVisitor(
@@ -103,7 +105,7 @@ public static class LlvmPass
                     return context.Int32Type;
                 case Ty.FuncTy funcTy:
                     var pty = funcTy.Args.Select(ParseType);
-                    return context.GetFunctionType(funcTy.IsVarArg,ParseType(funcTy.Ret), pty);
+                    return context.GetFunctionType(funcTy.IsVarArg, ParseType(funcTy.Ret), pty);
                 case Ty.VoidTy:
                     return context.VoidType;
                 default:
@@ -123,6 +125,12 @@ public static class LlvmPass
             var fty = (IFunctionType)ParseType(node.Type!);
             var func = module.CreateFunction(name, fty);
             functions.Add(node, func);
+
+            func.AddAttribute(FunctionAttributeIndex.Function, "nounwind");
+            func.AddAttribute(FunctionAttributeIndex.Function, "inlinehint");
+            func.AddAttribute(FunctionAttributeIndex.Function, "hot");
+            func.AddAttribute(FunctionAttributeIndex.Function, "willreturn");
+            func.AddAttribute(FunctionAttributeIndex.Function, "nofree");
 
             if (node.Body is not null)
             {

@@ -68,6 +68,7 @@ expression
     : callee=expression LParen (args+=expression (Comma args+=expression)*)? RParen #call
     | expression QMark #nullPointer //todo
     | expression Star #pointer      //todo
+    | expression Dot expression #memberAccess //todo
     | left=expression op right=expression #binaryOp
     | IntLit #integer
     | BoolLit #boolean
