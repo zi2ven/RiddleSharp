@@ -8,6 +8,7 @@ public static class PrimitiveType
     {
         ["int"] = new BuiltinTypeDecl("int"),
         ["char"] = new BuiltinTypeDecl("char"),
+        ["void"] = new BuiltinTypeDecl("void"),
         ["bool"] = new BuiltinTypeDecl("bool"),
         ["float"] = new BuiltinTypeDecl("float")
     };

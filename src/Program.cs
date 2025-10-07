@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
+using RiddleSharp.Background.Lg;
 using RiddleSharp.Background.Llvm;
 using RiddleSharp.Frontend;
 using RiddleSharp.Semantics;
@@ -13,6 +14,7 @@ public static class Program
     {
         return path.Select(File.ReadAllText).ToArray();
     }
+
     public static void Main(string[] args)
     {
         // var settings = ArgParser.Parse(args);
@@ -21,6 +23,7 @@ public static class Program
 
         const string a = """
                          package main;
+                         import test;
                          fun fib(x:int)->int{
                             if(x<2){
                                 return x;
@@ -30,21 +33,26 @@ public static class Program
                          }
                          fun main(){
                             var a = fib(35);
+                            var b = test::get(1);
                             return;
                          }
                          """;
+        const string cFile =  """
+                              int get(int x);
+                              """;
 
         var astLower = new CstLower();
 
         var u1 = astLower.Parse(a);
+        var u2 = CppConverter.Run(cFile, "test");
+
+        Console.WriteLine(u2);
 
         u1 = BinaryRotate.Run(u1);
 
-        var x = SymbolPass.Run([u1]);
+        var x = SymbolPass.Run([u2, u1]);
 
         var tp = TypeInfer.Run(x);
-
-        Console.WriteLine(x[0]);
 
         LlvmPass.Run(tp);
         // LgPass.Run(tp);

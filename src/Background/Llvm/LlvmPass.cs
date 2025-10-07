@@ -122,6 +122,11 @@ public static class LlvmPass
                 name = "main";
             }
 
+            if (node.Original)
+            {
+                name = node.Name;
+            }
+
             var fty = (IFunctionType)ParseType(node.Type!);
             var func = module.CreateFunction(name, fty);
             functions.Add(node, func);
@@ -215,7 +220,7 @@ public static class LlvmPass
             };
         }
 
-        public override Value VisitInteger(Integer node) => context.CreateConstant(node.Value);
+        public override Value VisitInteger(Integer node) => context.CreateConstant((int)node.Value);
 
         public override Value VisitBoolean(Boolean node) => context.CreateConstant(node.Value);
 

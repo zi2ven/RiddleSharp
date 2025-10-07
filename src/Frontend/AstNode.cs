@@ -108,7 +108,8 @@ public record FuncParam(string Name, Expr TypeLit) : VarDecl(Name, TypeLit, null
     }
 }
 
-public record FuncDecl(string Name, Expr? TypeLit, FuncParam[] Args, bool IsVarArg , Stmt[]? Body) : Decl(Name)
+public record FuncDecl(string Name, Expr? TypeLit, FuncParam[] Args, bool IsVarArg, Stmt[]? Body, bool Original = false)
+    : Decl(Name)
 {
     public Ty.FuncTy? Type { get; set; }
     public List<VarDecl> Alloc { get; } = [];
@@ -123,16 +124,17 @@ public record FuncDecl(string Name, Expr? TypeLit, FuncParam[] Args, bool IsVarA
         var args = string.Join(", ", Args.Select(s => s.ToString()));
         var body = string.Join(", ", Body is null ? "" : Body.Select(s => s.ToString()));
         return
-            $"FuncDecl {{ Name = {Name}, QualifiedName = {QualifiedName}, TypeLit = {TypeLit}, Args = [{args}], Body = [{body}] }} }}";
+            $"FuncDecl {{ Name = {Name}, QualifiedName = {QualifiedName}, TypeLit = {TypeLit}, Args = [{args}], Body = [{body}], Original = {Original} }} }}";
     }
 }
 
-public record ClassDecl(string Name, Stmt[] Stmts): Decl(Name)
+public record ClassDecl(string Name, Stmt[] Stmts) : Decl(Name)
 {
     public Ty.ClassTy? Type { get; set; }
     public Dictionary<string, FuncDecl> Methods { get; init; } = new();
     public Dictionary<string, VarDecl> Members { get; init; } = new();
     public Dictionary<string, ClassDecl> Nested { get; init; } = new();
+
     public override T Accept<T>(AstVisitor<T> visitor)
     {
         return visitor.VisitClassDecl(this);
@@ -144,7 +146,8 @@ public record ClassDecl(string Name, Stmt[] Stmts): Decl(Name)
         var methods = string.Join(", ", Methods.Values.Select(m => m.ToString()));
         var members = string.Join(", ", Members.Values.Select(v => v.ToString()));
         var nested = string.Join(", ", Nested.Values.Select(n => n.ToString()));
-        return $"ClassDecl {{ Name = {Name}, Stmts = [{stmts}], Methods = [{methods}], Members = [{members}], Nested = [{nested}] }}";
+        return
+            $"ClassDecl {{ Name = {Name}, Stmts = [{stmts}], Methods = [{methods}], Members = [{members}], Nested = [{nested}] }}";
     }
 }
 
@@ -204,7 +207,7 @@ public abstract record Expr : AstNode
 
 public record Integer : Expr
 {
-    public Integer(int Value)
+    public Integer(long Value)
     {
         this.Value = Value;
         Type = Ty.IntTy.Int32;
@@ -215,7 +218,7 @@ public record Integer : Expr
         return visitor.VisitInteger(this);
     }
 
-    public int Value { get; }
+    public long Value { get; }
 }
 
 public record Boolean : Expr
