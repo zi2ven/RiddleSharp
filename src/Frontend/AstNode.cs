@@ -92,6 +92,7 @@ public abstract record Decl(string Name) : Stmt
 public record VarDecl(string Name, Expr? TypeLit, Expr? Value) : Decl(Name)
 {
     public bool IsGlobal { get; set; }
+    public bool IsStatic { get; set; } = false;
     public Ty? Type { get; set; }
 
     public override T Accept<T>(AstVisitor<T> visitor)
@@ -108,11 +109,19 @@ public record FuncParam(string Name, Expr TypeLit) : VarDecl(Name, TypeLit, null
     }
 }
 
-public record FuncDecl(string Name, Expr? TypeLit, FuncParam[] Args, bool IsVarArg, Stmt[]? Body, bool Original = false)
+public record FuncDecl(
+    string Name,
+    Expr? TypeLit,
+    List<FuncParam> Args,
+    bool IsVarArg,
+    Stmt[]? Body)
     : Decl(Name)
 {
     public Ty.FuncTy? Type { get; set; }
     public List<VarDecl> Alloc { get; } = [];
+    public bool Original { get; set; } = false;
+
+    public bool isMethod { get; set; }
 
     public override T Accept<T>(AstVisitor<T> visitor)
     {
@@ -237,6 +246,27 @@ public record Boolean : Expr
     public bool Value { get; }
 }
 
+public record StringLit : Expr
+{
+    public StringLit(string Value)
+    {
+        this.Value = Value;
+        Type = Ty.PointerType.CharPointer;
+    }
+
+    public override T Accept<T>(AstVisitor<T> visitor)
+    {
+        return visitor.VisitStringLit(this);
+    }
+
+    public string Value { get; init; }
+
+    public void Deconstruct(out string Value)
+    {
+        Value = this.Value;
+    }
+}
+
 public record Symbol(QualifiedName Name) : Expr
 {
     public WeakReference<Decl>? DeclReference { get; set; }
@@ -266,5 +296,23 @@ public record Call(Expr Callee, Expr[] Args) : Expr
     public override T Accept<T>(AstVisitor<T> visitor)
     {
         return visitor.VisitCall(this);
+    }
+}
+
+public record MemberAccess(Expr Parent, string Child) : Expr
+{
+    public WeakReference<Decl>? DeclReference { get; set; }
+
+    public override T Accept<T>(AstVisitor<T> visitor)
+    {
+        return visitor.VisitMemberAccess(this);
+    }
+}
+
+public record PointedExpr(Expr Value) : Expr
+{
+    public override T Accept<T>(AstVisitor<T> visitor)
+    {
+        return visitor.VisitPointed(this);
     }
 }

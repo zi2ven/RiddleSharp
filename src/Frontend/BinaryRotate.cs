@@ -46,7 +46,7 @@ public static class BinaryRotate
         FuncDecl fd => new FuncDecl(
             fd.Name,
             fd.TypeLit is null ? null : RewriteExpr(fd.TypeLit),
-            fd.Args.Select(a => new FuncParam(a.Name, RewriteExpr(a.TypeLit!))).ToArray(),
+            fd.Args.Select(a => new FuncParam(a.Name, RewriteExpr(a.TypeLit!))).ToList(),
             fd.IsVarArg,
             fd.Body?.Select(RewriteStmt).ToArray()
         ),
@@ -67,6 +67,8 @@ public static class BinaryRotate
     {
         BinaryOp b => Rotate(new BinaryOp(b.Op, RewriteExpr(b.Left), RewriteExpr(b.Right))),
         Call c => new Call(RewriteExpr(c.Callee), c.Args.Select(RewriteExpr).ToArray()),
+        MemberAccess m => new MemberAccess(RewriteExpr(m.Parent), m.Child),
+        PointedExpr pe => new PointedExpr(RewriteExpr(pe.Value)),
         _ => e
     };
 

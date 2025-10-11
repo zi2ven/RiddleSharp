@@ -150,6 +150,7 @@ public static class SymbolPass
         private readonly IReadOnlyDictionary<QualifiedName, Dictionary<string, Decl>> _exportsByPkg;
 
         private readonly Stack<FuncDecl> _funcStack = new();
+        private readonly Stack<ClassDecl> _classStack = new();
 
         public SymbolVisitor(Unit unit,
             IReadOnlyDictionary<QualifiedName, Dictionary<string, Decl>> exportsByPkg)
@@ -196,6 +197,13 @@ public static class SymbolPass
         {
             if (!_table.IsGlobal) _table.AddDecl(node);
 
+            if (node.isMethod)
+            {
+                node.Args.Add(new FuncParam("this",
+                    new PointedExpr(
+                        new Symbol(_classStack.Peek().QualifiedName ?? throw new InvalidOperationException()))));
+            }
+
             VisitOrNull(node.TypeLit);
             _table.Push();
             _funcStack.Push(node);
@@ -220,8 +228,9 @@ public static class SymbolPass
         {
             _table.Push();
             var classQn = node.QualifiedName ?? _unit.PackageName.Add(node.Name);
-            
+
             node.Type ??= new Ty.ClassTy(classQn);
+            _classStack.Push(node);
             foreach (var s in node.Stmts)
             {
                 switch (s)
@@ -241,6 +250,7 @@ public static class SymbolPass
                         break;
 
                     case FuncDecl method:
+                        method.isMethod = true;
                         method.QualifiedName = classQn.Add(method.Name);
 
                         _table.AddDecl(method);
@@ -261,6 +271,8 @@ public static class SymbolPass
                         VisitOrNull(s);
                         break;
                 }
+
+                _classStack.Pop();
             }
 
             foreach (var method in node.Methods.Values)
@@ -329,6 +341,26 @@ public static class SymbolPass
                 : ResolveQualified(node.Name);
 
             node.DeclReference = new WeakReference<Decl>(decl);
+            return null;
+        }
+
+        public override object? VisitMemberAccess(MemberAccess node)
+        {
+            Visit(node.Parent);
+            if (node.Parent is Symbol { DeclReference: not null } s &&
+                s.DeclReference.TryGetTarget(out var target) &&
+                target is ClassDecl cls)
+            {
+                Decl resolved;
+                if (cls.Members.TryGetValue(node.Child, out var v)) resolved = v;
+                else if (cls.Methods.TryGetValue(node.Child, out var m)) resolved = m;
+                else if (cls.Nested.TryGetValue(node.Child, out var c)) resolved = c;
+                else throw new Exception($"'{cls.QualifiedName}::{node.Child}' does not exist");
+
+                node.DeclReference = new WeakReference<Decl>(resolved);
+            }
+
+            // 剩下留类型检查
             return null;
         }
 

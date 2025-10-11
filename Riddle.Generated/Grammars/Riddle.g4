@@ -67,9 +67,10 @@ exprStmt
 expression
     : callee=expression LParen (args+=expression (Comma args+=expression)*)? RParen #call
     | expression QMark #nullPointer //todo
-    | expression Star #pointer      //todo
-    | expression Dot expression #memberAccess //todo
+    | expression Star #pointer
+    | father=expression Dot Identifier #memberAccess
     | left=expression op right=expression #binaryOp
+    | StringLit #string
     | IntLit #integer
     | BoolLit #boolean
     | qName #symbol
@@ -107,6 +108,16 @@ Star: '*';
 Dot : '.';
 QMark: '?';
 ELLIPSIS: Dot Dot Dot;
+
+fragment HEX : [0-9a-fA-F];
+
+StringLit
+    : '"' (
+          ~["\\\r\n]
+        | '\\' [btnfr"\\]
+        | '\\u' HEX HEX HEX HEX
+      )* '"'
+    ;
 
 BoolLit: 'true' | 'false';
 IntLit: [1-9][0-9]* | '0';

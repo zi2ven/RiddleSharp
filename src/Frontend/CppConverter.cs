@@ -63,15 +63,14 @@ public static class CppConverter
 
         var args = f.Parameters
             .Select(p => new FuncParam(p.Name, LowerType(p.Type)))
-            .ToArray();
+            .ToList();
 
         var func = new FuncDecl(
             f.Name,
             retType,
             args,
             (f.Flags & CppFunctionFlags.Variadic) != CppFunctionFlags.None,
-            null,
-            true
+            null
         );
         return func;
     }

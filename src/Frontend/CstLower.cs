@@ -138,7 +138,7 @@ public class CstLower : RiddleBaseVisitor<AstNode>
         var @params = context.funcParamList()?._params.Select(LowerOrThrow<FuncParam>).ToList() ?? [];
         var returnType = LowerOrNull<Expr>(context.type);
         var body = LowerOrNull<Block>(context.body);
-        return new FuncDecl(name, returnType, @params.ToArray(), context.funcParamList()?.vararg is not null,
+        return new FuncDecl(name, returnType, @params.ToList(), context.funcParamList()?.vararg is not null,
             body?.Body);
     }
 
@@ -180,4 +180,12 @@ public class CstLower : RiddleBaseVisitor<AstNode>
             LowerOrThrow<Expr>(context.cond),
             LowerOrThrow<Stmt>(context.body));
     }
+
+    public override AstNode VisitMemberAccess(RiddleParser.MemberAccessContext context) =>
+        new MemberAccess(LowerOrThrow<Expr>(context.father), context.Identifier().GetText());
+
+    public override AstNode VisitPointer(RiddleParser.PointerContext context) =>
+        new PointedExpr(LowerOrThrow<Expr>(context.expression()));
+
+    public override AstNode VisitString(RiddleParser.StringContext context) => new StringLit(context.GetText());
 }

@@ -1,10 +1,6 @@
-﻿using System.Diagnostics;
-using System.Runtime.InteropServices;
-using RiddleSharp.Background.Lg;
-using RiddleSharp.Background.Llvm;
+﻿using RiddleSharp.Background.Llvm;
 using RiddleSharp.Frontend;
 using RiddleSharp.Semantics;
-using Ubiquity.NET.Llvm;
 
 namespace RiddleSharp;
 
@@ -23,34 +19,27 @@ public static class Program
 
         const string a = """
                          package main;
-                         import test;
-                         fun fib(x:int)->int{
-                            if(x<2){
-                                return x;
-                            }
-                            else
-                            return fib(x-1)+fib(x-2);
+                         fun printf(fmt: char*, ...)->void;
+                         class Foo{
+                            var a: int;
                          }
                          fun main(){
-                            var a = fib(35);
-                            var b = test::get(1);
+                            var x: Foo;
+                            x.a = 1;
+                            var b = x.a;
+                            printf("%d", b);
                             return;
                          }
                          """;
-        const string cFile =  """
-                              int get(int x);
-                              """;
 
         var astLower = new CstLower();
 
         var u1 = astLower.Parse(a);
-        var u2 = CppConverter.Run(cFile, "test");
 
-        Console.WriteLine(u2);
 
         u1 = BinaryRotate.Run(u1);
 
-        var x = SymbolPass.Run([u2, u1]);
+        var x = SymbolPass.Run([u1]);
 
         var tp = TypeInfer.Run(x);
 

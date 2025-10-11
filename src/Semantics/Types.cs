@@ -57,6 +57,12 @@ public abstract record Ty
             return hc.ToHashCode();
         }
     }
+
+    public sealed record PointerType(Ty Pointee) : Ty
+    {
+        public static readonly PointerType CharPointer = new(IntTy.Int8);
+        public override string ToString() => $"{Pointee}*";
+    }
     
     public sealed record ClassTy(QualifiedName Name) : Ty
     {

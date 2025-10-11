@@ -10,30 +10,37 @@ using Module = Ubiquity.NET.Llvm.Module;
 
 namespace RiddleSharp.Background.Llvm;
 
+internal class IntWrapper(int value)
+{
+    public int Value { get; set; } = value;
+}
+
 public static class LlvmPass
 {
     public static void Run(Unit[] units)
     {
         ConditionalWeakTable<VarDecl, Value> vars = new();
         ConditionalWeakTable<FuncDecl, Value> functions = new();
+        Dictionary<QualifiedName, IStructType> classes = new();
+        ConditionalWeakTable<VarDecl, IntWrapper> fieldIndex = new();
         using var context = new Context();
         using var module = context.CreateBitcodeModule();
         foreach (var unit in units)
         {
-            var v = new LlvmVisitor(context, module, vars, functions);
+            var v = new LlvmVisitor(context, module, vars, functions, classes, fieldIndex);
             v.Visit(unit);
         }
-
-        foreach (var fn in module.Functions)
-        {
-            if (fn.IsDeclaration) continue; // 只对有函数体的跑
-
-            var e = fn.TryRunPasses("mem2reg", "instcombine", "reassociate", "gvn", "simplifycfg");
-            if (e.Failed)
-            {
-                throw new Exception(e.ToString());
-            }
-        }
+        //
+        // foreach (var fn in module.Functions)
+        // {
+        //     if (fn.IsDeclaration) continue; // 只对有函数体的跑
+        //
+        //     var e = fn.TryRunPasses("mem2reg", "instcombine", "reassociate", "gvn", "simplifycfg");
+        //     if (e.Failed)
+        //     {
+        //         throw new Exception(e.ToString());
+        //     }
+        // }
 
         Console.WriteLine(module.WriteToString());
 
@@ -44,10 +51,14 @@ public static class LlvmPass
         Context context,
         Module module,
         ConditionalWeakTable<VarDecl, Value> vars,
-        ConditionalWeakTable<FuncDecl, Value> functions)
+        ConditionalWeakTable<FuncDecl, Value> functions,
+        Dictionary<QualifiedName, IStructType> classes,
+        ConditionalWeakTable<VarDecl, IntWrapper> fieldIndex)
         : AstVisitor<Value>
     {
         private readonly InstructionBuilder _builder = new(context);
+
+        private readonly Stack<ClassDecl> _classStack = new();
 
         private readonly Dictionary<(Ty, Ty, string), Func<Value, Value, InstructionBuilder, Value>> _operators = new()
         {
@@ -81,10 +92,35 @@ public static class LlvmPass
             return vars.GetOrCreateValue(var);
         }
 
-        private Value GetFunc(FuncDecl func)
+        private Value GetFunc(FuncDecl func) => functions.GetOrCreateValue(func);
+
+
+        private Value GetInstancePtr(Value rev)
         {
-            return functions.GetOrCreateValue(func);
+            if (rev.NativeType is IPointerType || rev is Load { NativeType: IPointerType }) return rev;
+
+            if (rev is Load ld)
+            {
+                return ld.Operands[0]!;
+            }
+
+            var tmp = _builder.Alloca(rev.NativeType);
+            _builder.Store(rev, tmp);
+            return tmp;
         }
+
+        private Value GEP_FieldPtr(ITypeRef type, Value thisPtr, int fieldIdx)
+        {
+            try
+            {
+                return _builder.GetStructElementPointer(type, thisPtr, (uint)fieldIdx);
+            }
+            catch
+            {
+                return _builder.GetElementPtr(thisPtr, context.CreateConstant(0), context.CreateConstant(fieldIdx));
+            }
+        }
+
 
         private T? VisitOrNull<T>(AstNode? node) where T : Value
         {
@@ -108,8 +144,62 @@ public static class LlvmPass
                     return context.GetFunctionType(funcTy.IsVarArg, ParseType(funcTy.Ret), pty);
                 case Ty.VoidTy:
                     return context.VoidType;
+                case Ty.ClassTy cty:
+                    var st = classes[cty.Name];
+                    return st;
+                case Ty.PointerType py:
+                    return ParseType(py.Pointee).CreatePointerType();
                 default:
                     throw new NotSupportedException($"Ty {ty} is not supported");
+            }
+        }
+
+        public override Value VisitClassDecl(ClassDecl node)
+        {
+            var qn = node.QualifiedName!.ToString();
+
+            var structTy = context.CreateStructType(qn, false);
+            classes[node.QualifiedName!] = structTy;
+
+            var fields = node.Stmts.OfType<VarDecl>().ToArray();
+            for (var i = 0; i < fields.Length; i++) fieldIndex.Add(fields[i], new IntWrapper(i));
+
+
+            var fieldTypes = fields.Select(f => ParseType(f.Type!)).ToArray();
+            structTy.SetBody(false, fieldTypes);
+
+            _classStack.Push(node);
+            foreach (var m in node.Methods.Values) Visit(m);
+            foreach (var nc in node.Nested.Values) Visit(nc);
+            _classStack.Pop();
+
+            return null!;
+        }
+
+        public override Value VisitMemberAccess(MemberAccess node)
+        {
+            if (node.DeclReference is null || !node.DeclReference.TryGetTarget(out var decl))
+                throw new Exception("MemberAccess missing DeclReference");
+
+            switch (decl)
+            {
+                case VarDecl fld: // 字段
+                {
+                    var recVal = Visit(node.Parent);
+                    var thisPtr = GetInstancePtr(recVal);
+
+                    if (!fieldIndex.TryGetValue(fld, out var idx))
+                        throw new Exception($"No field index for {fld.Name}");
+                    var fieldPtr = GEP_FieldPtr(ParseType(node.Parent.Type!), thisPtr, idx.Value);
+
+                    return _builder.Load(ParseType(fld.Type!), fieldPtr);
+                }
+
+                case FuncDecl m:
+                    return GetFunc(m);
+
+                default:
+                    throw new NotImplementedException($"MemberAccess for {decl.GetType().Name} not implemented");
             }
         }
 
@@ -117,17 +207,23 @@ public static class LlvmPass
         {
             var name = node.QualifiedName!.ToString();
             // 做 main
-            if (node.Name == "main")
-            {
-                name = "main";
-            }
+            if (node.Name == "main") name = "main";
+            if (node.Original) name = node.Name;
 
-            if (node.Original)
-            {
-                name = node.Name;
-            }
+            var isMethod = _classStack.Count > 0;
 
-            var fty = (IFunctionType)ParseType(node.Type!);
+            var retTy = ParseType(node.Type!.Ret);
+
+            var paramTypes = new List<ITypeRef>();
+            if (isMethod)
+            {
+                var owner = _classStack.Peek();
+                var st = classes[owner.QualifiedName!];
+                paramTypes.Add(st.CreatePointerType());
+            }
+            paramTypes.AddRange(node.Args.Select(a => ParseType(a.Type!)));
+
+            var fty = context.GetFunctionType(node.Type!.IsVarArg, retTy, paramTypes);
             var func = module.CreateFunction(name, fty);
             functions.Add(node, func);
 
@@ -143,7 +239,7 @@ public static class LlvmPass
                 _builder.PositionAtEnd(entry);
 
 
-                for (var i = 0; i < node.Args.Length; i++)
+                for (var i = 0; i < node.Args.Count; i++)
                 {
                     var alloca = func.Parameters[i];
                     vars.Add(node.Args[i], alloca);
@@ -155,17 +251,16 @@ public static class LlvmPass
                     vars.Add(a, alloca);
                 }
 
-
                 foreach (var i in node.Body)
                 {
                     Visit(i);
                 }
 
                 // 合法化处理
-                if (func.BasicBlocks.ElementAt(func.BasicBlocks.Count - 1).Terminator == null)
-                {
-                    throw new Exception("At the end of the function, a return is required");
-                }
+                // if (func.BasicBlocks.ElementAt(func.BasicBlocks.Count - 1).Terminator == null)
+                // {
+                //     throw new Exception("At the end of the function, a return is required");
+                // }
             }
 
             return null!;
@@ -194,14 +289,28 @@ public static class LlvmPass
         public override Value VisitCall(Call node)
         {
             var callee = Visit(node.Callee);
-            if (callee is not Function f)
+            if (node.Callee is MemberAccess { DeclReference: not null } ma &&
+                ma.DeclReference.TryGetTarget(out var d) &&
+                d is FuncDecl md)
             {
-                throw new Exception("Call is not of type function");
+                var f = (Function)GetFunc(md);
+
+                var args = node.Args.Select(Visit).ToList();
+
+                if (md.isMethod)
+                {
+                    var rec = Visit(ma.Parent);
+                    var thisPtr = GetInstancePtr(rec);
+                    args.Insert(0, thisPtr);
+                }
+
+                return _builder.Call(f, args);
             }
 
-            var args = node.Args.Select(Visit).ToList();
-
-            return _builder.Call(f, args);
+            if (callee is not Function fn)
+                throw new Exception("Call is not of type function");
+            var a = node.Args.Select(Visit).ToList();
+            return _builder.Call(fn, a);
         }
 
         public override Value VisitSymbol(Symbol node)
@@ -314,6 +423,26 @@ public static class LlvmPass
 
             _builder.PositionAtEnd(exitBb);
             return null!;
+        }
+
+        public override Value VisitStringLit(StringLit node)
+        {
+            var cStr = context.CreateConstantString(node.Value /*, addNullTerminator: true*/);
+
+            // 2) 用“常量自己的类型”作为全局变量类型，避免长度不匹配
+            var gv = module.AddGlobal(
+                cStr.NativeType,
+                true,
+                linkage: Linkage.Private,
+                cStr,
+                name: "__str"
+            );
+
+            // 3) 可选但推荐：unnamed_addr + 对齐
+            gv.UnnamedAddress = UnnamedAddressKind.Local;
+            gv.Alignment = 1;
+
+            return gv;
         }
     }
 }

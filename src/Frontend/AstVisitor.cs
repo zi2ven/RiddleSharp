@@ -124,4 +124,21 @@ public abstract class AstVisitor<T>
         }
         return default!;
     }
+
+    public virtual T VisitMemberAccess(MemberAccess node)
+    {
+        Visit(node.Parent);
+        return default!;
+    }
+
+    public virtual T VisitPointed(PointedExpr node)
+    {
+        Visit(node.Value);
+        return default!;
+    }
+
+    public virtual T VisitStringLit(StringLit node)
+    {
+        return default!;
+    }
 }
