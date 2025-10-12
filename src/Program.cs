@@ -19,15 +19,19 @@ public static class Program
 
         const string a = """
                          package main;
+                         @extern
                          fun printf(fmt: char*, ...)->void;
-                         class Foo{
-                            var a: int;
+                         @extern
+                         fun fib(x: int)->int{
+                            if(x<2){
+                                return x;
+                            }else{
+                                return fib(x-1)+fib(x-2);
+                            }
                          }
                          fun main(){
-                            var x: Foo;
-                            x.a = 1;
-                            var b = x.a;
-                            printf("%d", b);
+                            var t = fib(50);
+                            printf("%d", t);
                             return;
                          }
                          """;

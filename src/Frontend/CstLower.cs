@@ -117,7 +117,12 @@ public class CstLower : RiddleBaseVisitor<AstNode>
     {
         var type = LowerOrNull<Expr>(context.type);
         var value = LowerOrNull<Expr>(context.value);
-        return new VarDecl(context.name.Text, type, value);
+        var anno = new List<Annotation>();
+        if (context.annotation() is not null)
+        {
+            anno.Add(LowerOrThrow<Annotation>(context.annotation()));
+        }
+        return new VarDecl(context.name.Text, type, value, anno);
     }
 
     public override AstNode VisitBinaryOp(RiddleParser.BinaryOpContext context)
@@ -138,15 +143,26 @@ public class CstLower : RiddleBaseVisitor<AstNode>
         var @params = context.funcParamList()?._params.Select(LowerOrThrow<FuncParam>).ToList() ?? [];
         var returnType = LowerOrNull<Expr>(context.type);
         var body = LowerOrNull<Block>(context.body);
+        var anno = new List<Annotation>();
+        if (context.annotation() is not null)
+        {
+            anno.Add(LowerOrThrow<Annotation>(context.annotation()));
+        }
+
         return new FuncDecl(name, returnType, @params.ToList(), context.funcParamList()?.vararg is not null,
-            body?.Body);
+            body?.Body, anno);
     }
 
     public override AstNode VisitClassDecl(RiddleParser.ClassDeclContext context)
     {
         var name = context.name.Text;
         var body = LowerOrThrow<Block>(context.body);
-        return new ClassDecl(name, body.Body);
+        var anno = new List<Annotation>();
+        if (context.annotation() is not null)
+        {
+            anno.Add(LowerOrThrow<Annotation>(context.annotation()));
+        }
+        return new ClassDecl(name, body.Body, anno);
     }
 
     public override AstNode VisitBlock(RiddleParser.BlockContext context)
@@ -187,5 +203,12 @@ public class CstLower : RiddleBaseVisitor<AstNode>
     public override AstNode VisitPointer(RiddleParser.PointerContext context) =>
         new PointedExpr(LowerOrThrow<Expr>(context.expression()));
 
-    public override AstNode VisitString(RiddleParser.StringContext context) => new StringLit(context.GetText());
+    public override AstNode VisitString(RiddleParser.StringContext context) =>
+        new StringLit(context.GetText().Substring(1, context.GetText().Length - 2));
+
+    public override AstNode VisitAnnotation(RiddleParser.AnnotationContext context)
+    {
+        return new Annotation(context.Identifier().GetText(),
+            context.expression().Select(LowerOrThrow<Expr>).ToArray());
+    }
 }

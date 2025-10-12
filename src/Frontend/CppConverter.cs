@@ -31,7 +31,7 @@ public static class CppConverter
         stmts.AddRange(@class.Functions.Select(LowerFunction));
         stmts.AddRange(@class.Classes.Select(LowerClass));
 
-        var decl = new ClassDecl(@class.Name, stmts.ToArray());
+        var decl = new ClassDecl(@class.Name, stmts.ToArray(), [Annotation.Extern]);
         return decl;
     }
 
@@ -39,7 +39,7 @@ public static class CppConverter
     {
         var typeLit = LowerType(field.Type);
         var init = LowerExpr(field.InitExpression);
-        var decl = new VarDecl(field.Name, typeLit, init)
+        var decl = new VarDecl(field.Name, typeLit, init, [Annotation.Extern])
         {
             IsGlobal = false
         };
@@ -50,7 +50,7 @@ public static class CppConverter
     {
         var typeLit = LowerType(v.Type);
         var init = LowerExpr(v.InitExpression);
-        var decl = new VarDecl(v.Name, typeLit, init)
+        var decl = new VarDecl(v.Name, typeLit, init, [Annotation.Extern])
         {
             IsGlobal = true
         };
@@ -70,19 +70,20 @@ public static class CppConverter
             retType,
             args,
             (f.Flags & CppFunctionFlags.Variadic) != CppFunctionFlags.None,
-            null
+            null,
+            [Annotation.Extern]
         );
         return func;
     }
 
     private static Expr? LowerExpr(CppExpression? e)
     {
-        if (e is null) return null;
-
-        if (e is CppLiteralExpression lit)
-            return LowerLiteral(lit.Value);
-
-        return new Symbol(QualifiedName.Parse(e.ToString() ?? "<expr>"));
+        return e switch
+        {
+            null => null,
+            CppLiteralExpression lit => LowerLiteral(lit.Value),
+            _ => new Symbol(QualifiedName.Parse(e.ToString() ?? "<expr>"))
+        };
     }
 
     private static Expr LowerLiteral(object? value)

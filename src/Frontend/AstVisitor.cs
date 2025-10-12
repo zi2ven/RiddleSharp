@@ -141,4 +141,14 @@ public abstract class AstVisitor<T>
     {
         return default!;
     }
+
+    public T VisitAnnotation(Annotation annotation)
+    {
+        foreach (var i in annotation.Args)
+        {
+            Visit(i);
+        }
+
+        return default!;
+    }
 }

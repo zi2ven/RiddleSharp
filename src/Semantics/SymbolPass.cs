@@ -163,6 +163,14 @@ public static class SymbolPass
             VisitUnit(unit);
         }
 
+        private static void ExternLower(Decl decl)
+        {
+            if (decl.Annotations.Any(i => i == Annotation.Extern))
+            {
+                decl.QualifiedName = QualifiedName.Parse(decl.Name);
+            }
+        }
+
         private void PreDecl(Decl[] decls)
         {
             foreach (var d in decls)
@@ -183,6 +191,7 @@ public static class SymbolPass
 
         public override object? VisitVarDecl(VarDecl node)
         {
+            ExternLower(node);
             if (!_table.IsGlobal)
             {
                 _table.AddDecl(node);
@@ -203,6 +212,8 @@ public static class SymbolPass
                     new PointedExpr(
                         new Symbol(_classStack.Peek().QualifiedName ?? throw new InvalidOperationException()))));
             }
+
+            ExternLower(node);
 
             VisitOrNull(node.TypeLit);
             _table.Push();
@@ -226,6 +237,8 @@ public static class SymbolPass
 
         public override object? VisitClassDecl(ClassDecl node)
         {
+            ExternLower(node);
+
             _table.Push();
             var classQn = node.QualifiedName ?? _unit.PackageName.Add(node.Name);
 

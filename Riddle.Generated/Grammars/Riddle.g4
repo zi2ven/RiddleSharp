@@ -24,7 +24,7 @@ importStmt
     ;
 
 varDecl
-    : Var name=Identifier (Colon type=expression)? (Assign value=expression)? Semi
+    : annotation? Var name=Identifier (Colon type=expression)? (Assign value=expression)? Semi
     ;
     
 funcParam
@@ -37,7 +37,7 @@ funcParamList
     ;
 
 funcDecl
-    : Fun name=Identifier LParen funcParamList? RParen (Arrow type=expression)? ((body=block)|Semi)
+    : annotation? Fun name=Identifier LParen funcParamList? RParen (Arrow type=expression)? ((body=block)|Semi)
     ;
     
 ifStmt
@@ -57,16 +57,19 @@ returnStmt
     ;
 
 classDecl
-    : Class name=Identifier body=block
+    : annotation? Class name=Identifier body=block
+    ;
+
+annotation
+    : At Identifier (LParen (expression (Comma expression)*)? RParen)?
     ;
 
 exprStmt
     : expression Semi
     ;
-    
+
 expression
     : callee=expression LParen (args+=expression (Comma args+=expression)*)? RParen #call
-    | expression QMark #nullPointer //todo
     | expression Star #pointer
     | father=expression Dot Identifier #memberAccess
     | left=expression op right=expression #binaryOp
@@ -107,6 +110,8 @@ Arrow: '->';
 Star: '*';
 Dot : '.';
 QMark: '?';
+At: '@';
+
 ELLIPSIS: Dot Dot Dot;
 
 fragment HEX : [0-9a-fA-F];

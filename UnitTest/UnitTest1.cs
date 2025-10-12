@@ -20,7 +20,7 @@ public class AstTests
 
         var lower = new CstLower();
         var result = lower.Parse(text);
-        var ans = new Unit([new VarDecl("b", null, new Integer(1))], QualifiedName.Parse("test"));
+        var ans = new Unit([new VarDecl("b", null, new Integer(1), [])], QualifiedName.Parse("test"));
         Assert.That(ans, Is.EqualTo(result));
     }
 

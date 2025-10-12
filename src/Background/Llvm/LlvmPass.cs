@@ -30,17 +30,17 @@ public static class LlvmPass
             var v = new LlvmVisitor(context, module, vars, functions, classes, fieldIndex);
             v.Visit(unit);
         }
-        //
-        // foreach (var fn in module.Functions)
-        // {
-        //     if (fn.IsDeclaration) continue; // 只对有函数体的跑
-        //
-        //     var e = fn.TryRunPasses("mem2reg", "instcombine", "reassociate", "gvn", "simplifycfg");
-        //     if (e.Failed)
-        //     {
-        //         throw new Exception(e.ToString());
-        //     }
-        // }
+
+        foreach (var fn in module.Functions)
+        {
+            if (fn.IsDeclaration) continue; // 只对有函数体的跑
+
+            var e = fn.TryRunPasses("mem2reg", "instcombine", "reassociate", "gvn", "simplifycfg","tailcallelim");
+            if (e.Failed)
+            {
+                throw new Exception(e.ToString());
+            }
+        }
 
         Console.WriteLine(module.WriteToString());
 
@@ -310,7 +310,9 @@ public static class LlvmPass
             if (callee is not Function fn)
                 throw new Exception("Call is not of type function");
             var a = node.Args.Select(Visit).ToList();
-            return _builder.Call(fn, a);
+            var cd = _builder.Call(fn, a);
+            // cd.IsTailCall = true;
+            return cd;
         }
 
         public override Value VisitSymbol(Symbol node)
@@ -427,19 +429,17 @@ public static class LlvmPass
 
         public override Value VisitStringLit(StringLit node)
         {
-            var cStr = context.CreateConstantString(node.Value /*, addNullTerminator: true*/);
+            var cStr = context.CreateConstantString(node.Value, true);
 
-            // 2) 用“常量自己的类型”作为全局变量类型，避免长度不匹配
             var gv = module.AddGlobal(
                 cStr.NativeType,
                 true,
                 linkage: Linkage.Private,
                 cStr,
-                name: "__str"
+                name: ""
             );
 
-            // 3) 可选但推荐：unnamed_addr + 对齐
-            gv.UnnamedAddress = UnnamedAddressKind.Local;
+            gv.UnnamedAddress = UnnamedAddressKind.Global;
             gv.Alignment = 1;
 
             return gv;

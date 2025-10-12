@@ -82,14 +82,37 @@ public sealed record Unit(Stmt[] Stmts, QualifiedName PackageName) : AstNode
     }
 }
 
+public sealed record Annotation(string Identifier, Expr[] Args) : AstNode
+{
+    public static readonly Annotation Extern = new("extern", []);
+
+    public override T Accept<T>(AstVisitor<T> visitor)
+    {
+        return visitor.VisitAnnotation(this);
+    }
+
+    public bool Equals(Annotation? other)
+    {
+        if (other is null) return false;
+        if (Identifier != other.Identifier) return false;
+        if (Args.Length != other.Args.Length) return false;
+        return !Args.Where((t, i) => !t.Equals(other.Args[i])).Any();
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(base.GetHashCode(), Identifier, Args);
+    }
+}
+
 public abstract record Stmt : AstNode;
 
-public abstract record Decl(string Name) : Stmt
+public abstract record Decl(string Name,List<Annotation> Annotations) : Stmt
 {
     public QualifiedName? QualifiedName { get; set; }
 }
 
-public record VarDecl(string Name, Expr? TypeLit, Expr? Value) : Decl(Name)
+public record VarDecl(string Name, Expr? TypeLit, Expr? Value,List<Annotation> Annotations) : Decl(Name,Annotations)
 {
     public bool IsGlobal { get; set; }
     public bool IsStatic { get; set; } = false;
@@ -101,7 +124,7 @@ public record VarDecl(string Name, Expr? TypeLit, Expr? Value) : Decl(Name)
     }
 }
 
-public record FuncParam(string Name, Expr TypeLit) : VarDecl(Name, TypeLit, null)
+public record FuncParam(string Name, Expr TypeLit) : VarDecl(Name, TypeLit, null, [])
 {
     public override T Accept<T>(AstVisitor<T> visitor)
     {
@@ -114,8 +137,9 @@ public record FuncDecl(
     Expr? TypeLit,
     List<FuncParam> Args,
     bool IsVarArg,
-    Stmt[]? Body)
-    : Decl(Name)
+    Stmt[]? Body,
+    List<Annotation> Annotations)
+    : Decl(Name,Annotations)
 {
     public Ty.FuncTy? Type { get; set; }
     public List<VarDecl> Alloc { get; } = [];
@@ -137,7 +161,7 @@ public record FuncDecl(
     }
 }
 
-public record ClassDecl(string Name, Stmt[] Stmts) : Decl(Name)
+public record ClassDecl(string Name, Stmt[] Stmts,List<Annotation> Annotations) : Decl(Name, Annotations)
 {
     public Ty.ClassTy? Type { get; set; }
     public Dictionary<string, FuncDecl> Methods { get; init; } = new();
@@ -161,7 +185,7 @@ public record ClassDecl(string Name, Stmt[] Stmts) : Decl(Name)
 }
 
 // only in Symbol Pass
-public record BuiltinTypeDecl(string Name) : Decl(Name)
+public record BuiltinTypeDecl(string Name) : Decl(Name, [])
 {
     public override T Accept<T>(AstVisitor<T> visitor)
     {

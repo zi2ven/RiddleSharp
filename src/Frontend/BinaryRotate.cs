@@ -36,7 +36,7 @@ public static class BinaryRotate
         VarDecl vd => new VarDecl(
             vd.Name,
             vd.TypeLit is null ? null : RewriteExpr(vd.TypeLit),
-            vd.Value is null ? null : RewriteExpr(vd.Value)
+            vd.Value is null ? null : RewriteExpr(vd.Value), vd.Annotations
         ),
 
         ExprStmt es => new ExprStmt(RewriteExpr(es.Expr)),
@@ -48,7 +48,8 @@ public static class BinaryRotate
             fd.TypeLit is null ? null : RewriteExpr(fd.TypeLit),
             fd.Args.Select(a => new FuncParam(a.Name, RewriteExpr(a.TypeLit!))).ToList(),
             fd.IsVarArg,
-            fd.Body?.Select(RewriteStmt).ToArray()
+            fd.Body?.Select(RewriteStmt).ToArray(),
+            fd.Annotations
         ),
 
         If @if => new If(
