@@ -145,7 +145,7 @@ public static class TypeInfer
                     "void" => Ty.VoidTy.Instance,
                     "bool" => Ty.IntTy.Boolean,
                     "int" => Ty.IntTy.Int32,
-                    "char" => Ty.IntTy.Int8,
+                    "char" => Ty.IntTy.UInt8,
                     _ => throw new NotImplementedException($"Builtin type \'{b.Name}\' not implemented")
                 },
                 VarDecl v => v.Type,
@@ -200,7 +200,7 @@ public static class TypeInfer
         public override object? VisitIf(If node)
         {
             Visit(node.Condition);
-            if (node.Condition.Type is not Ty.IntTy { Width: 1 })
+            if (node.Condition.Type is not Ty.IntTy { WidthInBits: 1 })
             {
                 throw new Exception("If condition must be boolean");
             }
@@ -217,7 +217,7 @@ public static class TypeInfer
         public override object? VisitWhile(While node)
         {
             Visit(node.Condition);
-            if (node.Condition.Type is not Ty.IntTy { Width: 1 })
+            if (node.Condition.Type is not Ty.IntTy { WidthInBits: 1 })
             {
                 throw new Exception("While condition must be boolean");
             }

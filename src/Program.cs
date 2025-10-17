@@ -1,5 +1,6 @@
 ﻿using RiddleSharp.Background.Llvm;
 using RiddleSharp.Frontend;
+using RiddleSharp.Hir;
 using RiddleSharp.Semantics;
 
 namespace RiddleSharp;
@@ -47,7 +48,11 @@ public static class Program
 
         var tp = TypeInfer.Run(x);
 
-        LlvmPass.Run(tp);
+        var hirModule = HirGen.Run(tp);
+
+        HirPrinter at = new();
+        Console.WriteLine(at.Print(hirModule));
+
         // LgPass.Run(tp);
     }
 }

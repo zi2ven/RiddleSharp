@@ -109,6 +109,7 @@ public abstract record Stmt : AstNode;
 
 public abstract record Decl(string Name,List<Annotation> Annotations) : Stmt
 {
+    public bool IsOriginalNaming { get; set; } = false;
     public QualifiedName? QualifiedName { get; set; }
 }
 
@@ -143,7 +144,6 @@ public record FuncDecl(
 {
     public Ty.FuncTy? Type { get; set; }
     public List<VarDecl> Alloc { get; } = [];
-    public bool Original { get; set; } = false;
 
     public bool isMethod { get; set; }
 
@@ -157,7 +157,7 @@ public record FuncDecl(
         var args = string.Join(", ", Args.Select(s => s.ToString()));
         var body = string.Join(", ", Body is null ? "" : Body.Select(s => s.ToString()));
         return
-            $"FuncDecl {{ Name = {Name}, QualifiedName = {QualifiedName}, TypeLit = {TypeLit}, Args = [{args}], Body = [{body}], Original = {Original} }} }}";
+            $"FuncDecl {{ Name = {Name}, QualifiedName = {QualifiedName}, TypeLit = {TypeLit}, Args = [{args}], Body = [{body}], Original = {IsOriginalNaming} }} }}";
     }
 }
 

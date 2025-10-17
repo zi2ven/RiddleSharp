@@ -242,7 +242,9 @@ public static class SymbolPass
             _table.Push();
             var classQn = node.QualifiedName ?? _unit.PackageName.Add(node.Name);
 
-            node.Type ??= new Ty.ClassTy(classQn);
+            var clsTy = node.Type ?? new Ty.ClassTy(classQn);
+            node.Type = clsTy with { DeclRef = new WeakReference<ClassDecl>(node) };
+
             _classStack.Push(node);
             foreach (var s in node.Stmts)
             {
@@ -277,7 +279,9 @@ public static class SymbolPass
                         _table.AddDecl(nested);
                         node.Nested[nested.Name] = nested;
                         _unit.Decls.Value[nested.QualifiedName] = nested;
-                        nested.Type ??= new Ty.ClassTy(nested.QualifiedName);
+
+                        var nestedTy = nested.Type ?? new Ty.ClassTy(nested.QualifiedName);
+                        nested.Type = nestedTy with { DeclRef = new WeakReference<ClassDecl>(nested) };
                         break;
 
                     default:

@@ -208,7 +208,7 @@ public static class LlvmPass
             var name = node.QualifiedName!.ToString();
             // 做 main
             if (node.Name == "main") name = "main";
-            if (node.Original) name = node.Name;
+            if (node.IsOriginalNaming) name = node.Name;
 
             var isMethod = _classStack.Count > 0;
 
