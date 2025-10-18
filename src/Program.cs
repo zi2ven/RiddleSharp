@@ -50,9 +50,12 @@ public static class Program
 
         var hirModule = HirGen.Run(tp);
 
-        HirPrinter at = new();
-        Console.WriteLine(at.Print(hirModule));
+        // HirPrinter at = new();
+        // Console.WriteLine(at.Print(hirModule));
 
+        var md = HirLlvmPass.Run(hirModule);
+
+        Console.WriteLine(md.WriteToString());
         // LgPass.Run(tp);
     }
 }
